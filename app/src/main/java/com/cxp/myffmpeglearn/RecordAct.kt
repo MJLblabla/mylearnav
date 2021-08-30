@@ -28,8 +28,7 @@ import android.os.Build
 import android.os.Environment
 import android.view.Surface.ROTATION_0
 import android.view.Surface.ROTATION_90
-import com.cxp.myffmpeglearn.CameraUtil.COLOR_FormatI420
-import com.cxp.myffmpeglearn.CameraUtil.COLOR_FormatNV21
+import com.cxp.myffmpeglearn.CameraUtil.*
 import com.cxp.nativelibffmpeg.MediaRecorderContext.Companion.IMAGE_FORMAT_NV21
 
 
@@ -68,23 +67,10 @@ class MainActivity : AppCompatActivity() {
         override fun analyze(image: ImageProxy) {
             var w = image.getWidth()
             var h = image.getHeight()
-            //  val byteBuffer = CameraUtil.getDataFromImage(image, COLOR_FormatNV21)
+            var byteArray = CameraUtil.getDataFromImage(image, CameraUtil.COLOR_FormatI420)
+            mediaRecorderContext.native_OnVideoData(IMAGE_FORMAT_I420, byteArray, w, h);
+            Log.d("mjl", "onImageProxy finish ${w}  ${h} ${image.imageInfo.rotationDegrees}")
 
-                // var byteArray = CameraUtil.getDataFromImage(image, CameraUtil.COLOR_FormatI420)
-            var byteArray = CameraUtil.getDataFromImage(image, CameraUtil.COLOR_FormatNV21)
-//            if (image.imageInfo.rotationDegrees == 90) {
-//                byteArray = CameraUtil.rotateYUV420Degree90(byteArray, w, h)
-//                val temp = h
-//                h = w
-//                w = temp
-//            }
-            Log.d("mjl", "onImageProxy ${w} ${h} ${image.imageInfo.rotationDegrees}")
-            mediaRecorderContext.native_OnVideoData(IMAGE_FORMAT_NV21, byteArray, w, h);
-            Log.d("mjl", "onImageProxy finish")
-//            ivImg.post {
-//                ivImg.setImageBitmap(CameraUtil.nv21ToBitmap(byteArray,w,h))
-//            //    ivImg.setImageBitmap(CameraUtil.nv21ToBitmap(CameraUtil.I420ToNV21(byteArray,w,h),w,h))
-//            }
             image.close()
         }
     }

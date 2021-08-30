@@ -94,8 +94,8 @@ MediaRecorderContext::StartRecord(int recorderType, const char *outUrl, int fram
         case RECORDER_TYPE_AV:
             if (m_pAVRecorder == nullptr) {
                 RecorderParam param = {0};
-                param.frameWidth = frameHeight;
-                param.frameHeight = frameWidth;
+                param.frameWidth = frameWidth;
+                param.frameHeight = frameHeight;
                 param.videoBitRate = videoBitRate;
                 param.fps = fps;
                 param.audioSampleRate = DEFAULT_SAMPLE_RATE;
@@ -163,12 +163,12 @@ MediaRecorderContext::OnVideoFrame(void *ctx, int format, uint8_t *pBuffer, int 
             src_yuv = pBuffer;
             break;
     }
-
+//
 //    uint8_t *rotateyuv = static_cast<uint8_t *>(malloc(size));
-//    rotateI420(src_yuv, widthsrc, heightsrc, rotateyuv, 270);
+//    rotateI420(src_yuv, widthsrc, heightsrc, rotateyuv, 90);
 //    int width = heightsrc;
 //    int height = widthsrc;
-
+//
 
     uint8_t *rotateyuv = src_yuv;//static_cast<uint8_t *>(malloc(size));
     // rotateI420(src_yuv, widthsrc, heightsrc, rotateyuv, 90);
@@ -207,9 +207,10 @@ MediaRecorderContext::OnVideoFrame(void *ctx, int format, uint8_t *pBuffer, int 
 
     if (m_pAVRecorder != nullptr)
         m_pAVRecorder->OnFrame2Encode(nativeImage);
-    free(src_yuv);
-    src_yuv= nullptr;
-
+    if(format==IMAGE_FORMAT_NV21){
+        free(src_yuv);
+        src_yuv= nullptr;
+    }
 }
 
 

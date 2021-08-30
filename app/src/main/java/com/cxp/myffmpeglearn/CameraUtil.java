@@ -3,6 +3,7 @@ package com.cxp.myffmpeglearn;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.ImageFormat;
+import android.graphics.Matrix;
 import android.graphics.Point;
 import android.graphics.Rect;
 import android.graphics.YuvImage;
@@ -226,6 +227,62 @@ public class CameraUtil {
             if (VERBOSE) Log.v(TAG, "Finished reading data from plane " + i);
         }
         return data;
+    }
+
+
+    // argb 8888 转 i420
+    public static byte[] conver_argb_to_i420(Bitmap bitmap, int width, int height) {
+        final int frameSize = width * height;
+        byte[] i420 = new byte[width * height * 3 / 2];
+        int[] argb = new int[width * height];
+        // Bitmap 获取 argb
+        bitmap.getPixels(argb, 0, width, 0, 0, width, height);
+        int yIndex = 0;                   // Y start index
+        int uIndex = frameSize;           // U statt index
+        int vIndex = frameSize*5/4; // V start index: w*h*5/4
+
+        int a, R, G, B, Y, U, V;
+        int index = 0;
+        for (int j = 0; j < height; j++) {
+            for (int i = 0; i < width; i++) {
+                a = (argb[index] & 0xff000000) >> 24; //  is not used obviously
+                R = (argb[index] & 0xff0000) >> 16;
+                G = (argb[index] & 0xff00) >> 8;
+                B = (argb[index] & 0xff) >> 0;
+
+                // well known RGB to YUV algorithm
+                Y = ( (  66 * R + 129 * G +  25 * B + 128) >> 8) +  16;
+                U = ( ( -38 * R -  74 * G + 112 * B + 128) >> 8) + 128;
+                V = ( ( 112 * R -  94 * G -  18 * B + 128) >> 8) + 128;
+
+                // I420(YUV420p) -> YYYYYYYY UU VV
+                i420[yIndex++] = (byte) ((Y < 0) ? 0 : ((Y > 255) ? 255 : Y));
+                if (j % 2 == 0 && i % 2 == 0) {
+                    i420[uIndex++] = (byte)((U<0) ? 0 : ((U > 255) ? 255 : U));
+                    i420[vIndex++] = (byte)((V<0) ? 0 : ((V > 255) ? 255 : V));
+                }
+                index ++;
+            }
+        }
+        return i420;
+    }
+
+
+    public  static Bitmap rotateBitmap(Bitmap origin, float alpha) {
+        if (origin == null) {
+            return null;
+        }
+        int width = origin.getWidth();
+        int height = origin.getHeight();
+        Matrix matrix = new Matrix();
+        matrix.setRotate(alpha);
+        // 围绕原地进行旋转
+        Bitmap newBM = Bitmap.createBitmap(origin, 0, 0, width, height, matrix, false);
+        if (newBM.equals(origin)) {
+            return newBM;
+        }
+        origin.recycle();
+        return newBM;
     }
 
 
