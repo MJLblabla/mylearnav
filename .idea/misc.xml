@@ -4,7 +4,11 @@
     <option name="filePathToZoomLevelMap">
       <map>
         <entry key="app/src/main/res/layout/activity_main.xml" value="0.1" />
+        <entry key="app/src/main/res/layout/activity_rtc.xml" value="0.1852355072463768" />
         <entry key="app/src/main/res/layout/activity_start.xml" value="0.1802536231884058" />
+        <entry key="app/src/main/res/layout/item_v.xml" value="0.1802536231884058" />
+        <entry key="webrtc1v1/src/main/res/layout/activity_call_video.xml" value="0.1983695652173913" />
+        <entry key="webrtc1v1/src/main/res/layout/activity_main.xml" value="0.1983695652173913" />
       </map>
     </option>
   </component>

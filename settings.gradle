@@ -1,11 +1,15 @@
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
+        maven { url 'https://jitpack.io' }
         google()
+        jcenter()
         mavenCentral()
-        jcenter() // Warning: this repository is going to shut down soon
     }
 }
 rootProject.name = "MyFfmpegLearn"
 include ':app'
 include ':nativelibFfmpeg'
+include ':libyuv'
+include ':mediasoupRTC'
+include ':webrtc1v1'

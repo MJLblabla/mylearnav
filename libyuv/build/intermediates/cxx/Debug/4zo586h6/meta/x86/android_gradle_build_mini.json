@@ -1,0 +1,70 @@
+{
+  "buildFiles": [
+    "/Users/manjialle/AndroidStudioProjects/MyFfmpegLearn/libyuv/CMakeLists.txt",
+    "/Users/manjialle/AndroidStudioProjects/MyFfmpegLearn/libyuv/src/main/cpp/libyuv/CMakeLists.txt"
+  ],
+  "cleanCommandsComponents": [
+    [
+      "/Users/manjialle/Library/Android/sdk/cmake/3.10.2.4988404/bin/ninja",
+      "-C",
+      "/Users/manjialle/AndroidStudioProjects/MyFfmpegLearn/libyuv/.cxx/Debug/4zo586h6/x86",
+      "clean"
+    ]
+  ],
+  "buildTargetsCommandComponents": [
+    "/Users/manjialle/Library/Android/sdk/cmake/3.10.2.4988404/bin/ninja",
+    "-C",
+    "/Users/manjialle/AndroidStudioProjects/MyFfmpegLearn/libyuv/.cxx/Debug/4zo586h6/x86",
+    "{LIST_OF_TARGETS_TO_BUILD}"
+  ],
+  "libraries": {
+    "yuv-Debug-x86": {
+      "artifactName": "yuv",
+      "buildCommandComponents": [
+        "/Users/manjialle/Library/Android/sdk/cmake/3.10.2.4988404/bin/ninja",
+        "-C",
+        "/Users/manjialle/AndroidStudioProjects/MyFfmpegLearn/libyuv/.cxx/Debug/4zo586h6/x86",
+        "yuv"
+      ],
+      "abi": "x86",
+      "output": "/Users/manjialle/AndroidStudioProjects/MyFfmpegLearn/libyuv/.cxx/Debug/4zo586h6/x86/build/libyuv.a",
+      "runtimeFiles": []
+    },
+    "yuvconvert-Debug-x86": {
+      "artifactName": "yuvconvert",
+      "buildCommandComponents": [
+        "/Users/manjialle/Library/Android/sdk/cmake/3.10.2.4988404/bin/ninja",
+        "-C",
+        "/Users/manjialle/AndroidStudioProjects/MyFfmpegLearn/libyuv/.cxx/Debug/4zo586h6/x86",
+        "yuvconvert"
+      ],
+      "abi": "x86",
+      "output": "/Users/manjialle/AndroidStudioProjects/MyFfmpegLearn/libyuv/build/intermediates/cxx/Debug/4zo586h6/obj/x86/yuvconvert",
+      "runtimeFiles": []
+    },
+    "yuv_shared-Debug-x86": {
+      "artifactName": "yuv_shared",
+      "buildCommandComponents": [
+        "/Users/manjialle/Library/Android/sdk/cmake/3.10.2.4988404/bin/ninja",
+        "-C",
+        "/Users/manjialle/AndroidStudioProjects/MyFfmpegLearn/libyuv/.cxx/Debug/4zo586h6/x86",
+        "yuv_shared"
+      ],
+      "abi": "x86",
+      "output": "/Users/manjialle/AndroidStudioProjects/MyFfmpegLearn/libyuv/build/intermediates/cxx/Debug/4zo586h6/obj/x86/libyuv.so",
+      "runtimeFiles": []
+    },
+    "yuvutil-Debug-x86": {
+      "artifactName": "yuvutil",
+      "buildCommandComponents": [
+        "/Users/manjialle/Library/Android/sdk/cmake/3.10.2.4988404/bin/ninja",
+        "-C",
+        "/Users/manjialle/AndroidStudioProjects/MyFfmpegLearn/libyuv/.cxx/Debug/4zo586h6/x86",
+        "yuvutil"
+      ],
+      "abi": "x86",
+      "output": "/Users/manjialle/AndroidStudioProjects/MyFfmpegLearn/libyuv/build/intermediates/cxx/Debug/4zo586h6/obj/x86/libyuvutil.so",
+      "runtimeFiles": []
+    }
+  }
+}

@@ -1,0 +1,70 @@
+{
+  "buildFiles": [
+    "/Users/manjialle/AndroidStudioProjects/MyFfmpegLearn/libyuv/CMakeLists.txt",
+    "/Users/manjialle/AndroidStudioProjects/MyFfmpegLearn/libyuv/src/main/cpp/libyuv/CMakeLists.txt"
+  ],
+  "cleanCommandsComponents": [
+    [
+      "/Users/manjialle/Library/Android/sdk/cmake/3.10.2.4988404/bin/ninja",
+      "-C",
+      "/Users/manjialle/AndroidStudioProjects/MyFfmpegLearn/libyuv/.cxx/Debug/4zo586h6/armeabi-v7a",
+      "clean"
+    ]
+  ],
+  "buildTargetsCommandComponents": [
+    "/Users/manjialle/Library/Android/sdk/cmake/3.10.2.4988404/bin/ninja",
+    "-C",
+    "/Users/manjialle/AndroidStudioProjects/MyFfmpegLearn/libyuv/.cxx/Debug/4zo586h6/armeabi-v7a",
+    "{LIST_OF_TARGETS_TO_BUILD}"
+  ],
+  "libraries": {
+    "yuv_shared-Debug-armeabi-v7a": {
+      "artifactName": "yuv_shared",
+      "buildCommandComponents": [
+        "/Users/manjialle/Library/Android/sdk/cmake/3.10.2.4988404/bin/ninja",
+        "-C",
+        "/Users/manjialle/AndroidStudioProjects/MyFfmpegLearn/libyuv/.cxx/Debug/4zo586h6/armeabi-v7a",
+        "yuv_shared"
+      ],
+      "abi": "armeabi-v7a",
+      "output": "/Users/manjialle/AndroidStudioProjects/MyFfmpegLearn/libyuv/build/intermediates/cxx/Debug/4zo586h6/obj/armeabi-v7a/libyuv.so",
+      "runtimeFiles": []
+    },
+    "yuv-Debug-armeabi-v7a": {
+      "artifactName": "yuv",
+      "buildCommandComponents": [
+        "/Users/manjialle/Library/Android/sdk/cmake/3.10.2.4988404/bin/ninja",
+        "-C",
+        "/Users/manjialle/AndroidStudioProjects/MyFfmpegLearn/libyuv/.cxx/Debug/4zo586h6/armeabi-v7a",
+        "yuv"
+      ],
+      "abi": "armeabi-v7a",
+      "output": "/Users/manjialle/AndroidStudioProjects/MyFfmpegLearn/libyuv/.cxx/Debug/4zo586h6/armeabi-v7a/build/libyuv.a",
+      "runtimeFiles": []
+    },
+    "yuvutil-Debug-armeabi-v7a": {
+      "artifactName": "yuvutil",
+      "buildCommandComponents": [
+        "/Users/manjialle/Library/Android/sdk/cmake/3.10.2.4988404/bin/ninja",
+        "-C",
+        "/Users/manjialle/AndroidStudioProjects/MyFfmpegLearn/libyuv/.cxx/Debug/4zo586h6/armeabi-v7a",
+        "yuvutil"
+      ],
+      "abi": "armeabi-v7a",
+      "output": "/Users/manjialle/AndroidStudioProjects/MyFfmpegLearn/libyuv/build/intermediates/cxx/Debug/4zo586h6/obj/armeabi-v7a/libyuvutil.so",
+      "runtimeFiles": []
+    },
+    "yuvconvert-Debug-armeabi-v7a": {
+      "artifactName": "yuvconvert",
+      "buildCommandComponents": [
+        "/Users/manjialle/Library/Android/sdk/cmake/3.10.2.4988404/bin/ninja",
+        "-C",
+        "/Users/manjialle/AndroidStudioProjects/MyFfmpegLearn/libyuv/.cxx/Debug/4zo586h6/armeabi-v7a",
+        "yuvconvert"
+      ],
+      "abi": "armeabi-v7a",
+      "output": "/Users/manjialle/AndroidStudioProjects/MyFfmpegLearn/libyuv/build/intermediates/cxx/Debug/4zo586h6/obj/armeabi-v7a/yuvconvert",
+      "runtimeFiles": []
+    }
+  }
+}

@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">WebRTCForAndroid</string>
+    <string name="call_video">进入音视频通话</string>
+    <string name="connect">连接</string>
+</resources>

@@ -10,8 +10,7 @@ class MediaRecorderContext {
      * which is packaged with this application.
      */
      external fun stringFromJNI(): String
-
-
+     
      external fun native_CreateContext()
 
      external fun native_DestroyContext()
