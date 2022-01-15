@@ -134,7 +134,7 @@ int MediaRecorder::StopRecord() {
             delete m_pMediaThread;
             m_pMediaThread = nullptr;
         }
-
+        LOGCATE("MediaRecorder::StopRecord  + m_VideoFrameQueue %d",m_VideoFrameQueue.Size());
         while (!m_VideoFrameQueue.Empty()) {
             VideoFrame *pImage = m_VideoFrameQueue.Pop();
             NativeImageUtil::FreeNativeImage(pImage);

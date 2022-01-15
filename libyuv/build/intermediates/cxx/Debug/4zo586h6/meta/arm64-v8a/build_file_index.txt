@@ -1,2 +1,0 @@
-/Users/manjialle/AndroidStudioProjects/MyFfmpegLearn/libyuv/CMakeLists.txt
-/Users/manjialle/AndroidStudioProjects/MyFfmpegLearn/libyuv/src/main/cpp/libyuv/CMakeLists.txt

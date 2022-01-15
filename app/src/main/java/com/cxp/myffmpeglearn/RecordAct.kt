@@ -29,7 +29,9 @@ import android.os.Environment
 import android.view.Surface.ROTATION_0
 import android.view.Surface.ROTATION_90
 import com.cxp.myffmpeglearn.CameraUtil.*
+import com.cxp.nativelibffmpeg.MediaRecorderContext.Companion.IMAGE_FORMAT_NV12
 import com.cxp.nativelibffmpeg.MediaRecorderContext.Companion.IMAGE_FORMAT_NV21
+import com.cxp.nativelibffmpeg.MediaRecorderContext.Companion.IMAGE_FORMAT_RGBA
 
 
 class MainActivity : AppCompatActivity() {
@@ -41,6 +43,8 @@ class MainActivity : AppCompatActivity() {
     }
     private var imageCapture: ImageCapture? = null
 
+    val rgbaProducer = RGBAProducer()
+    val consumerBuffer = RGBAConsumerBuffer()
     private val audioRecorder by lazy {
         AudioRecorder(
             object : AudioRecorder.AudioRecorderCallback {
@@ -67,8 +71,11 @@ class MainActivity : AppCompatActivity() {
         override fun analyze(image: ImageProxy) {
             var w = image.getWidth()
             var h = image.getHeight()
-            var byteArray = CameraUtil.getDataFromImage(image, CameraUtil.COLOR_FormatI420)
-            mediaRecorderContext.native_OnVideoData(IMAGE_FORMAT_I420, byteArray, w, h);
+           // var byteArray = CameraUtil.getDataFromImage(image, CameraUtil.COLOR_FormatNV21)
+
+            rgbaProducer.parseImg(image)
+         //   consumerBuffer.addRgbQueen(rgbaProducer.rgbaByteArray!!,rgbaProducer.mWidth,rgbaProducer.mHeight,rgbaProducer.pixelStride,rgbaProducer.rowPadding)
+            mediaRecorderContext.native_OnVideoData(IMAGE_FORMAT_RGBA, rgbaProducer.rgbaByteArray, w, h);
             Log.d("mjl", "onImageProxy finish ${w}  ${h} ${image.imageInfo.rotationDegrees}")
 
             image.close()
@@ -101,6 +108,11 @@ class MainActivity : AppCompatActivity() {
         // Set up the listener for take photo button
         camera_capture_button.setOnClickListener {
             takePhoto()
+        }
+
+        btStop.setOnClickListener {
+            onBackPressed();
+
         }
     }
 
@@ -141,9 +153,12 @@ class MainActivity : AppCompatActivity() {
     private fun startCamera() {
 
         val imageAnalyzer = ImageAnalysis.Builder()
-            .setTargetResolution(Size(480, 640))
 
+            .setTargetResolution(Size(480, 640))
+            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+            .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
             .build()
+
             .also {
                 it.setAnalyzer(cameraExecutor, mLuminosityAnalyzer)
             }
@@ -181,8 +196,8 @@ class MainActivity : AppCompatActivity() {
 
         }, ContextCompat.getMainExecutor(this))
         audioRecorder.run()
-        val frameWidth: Int = 480
-        val frameHeight: Int = 640
+        val frameWidth: Int = 640
+        val frameHeight: Int = 480
         val fps = 25
         val bitRate = (frameWidth * frameHeight * fps * 0.3).toLong()
         var url: String? = ""
@@ -223,6 +238,7 @@ class MainActivity : AppCompatActivity() {
         audioRecorder.stop()
         mediaRecorderContext.native_StopRecord()
         mediaRecorderContext.native_DestroyContext()
+        System.gc()
         super.onBackPressed()
 
     }

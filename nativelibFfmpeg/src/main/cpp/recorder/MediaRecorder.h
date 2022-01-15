@@ -83,6 +83,14 @@ public:
     //停止录制
     int StopRecord();
 
+    int getWorkAbleVideoQueueSize(){
+        return m_VideoFrameQueue.Size();
+    }
+    int getWorkAbleAudioQueueSize(){
+        return m_AudioFrameQueue.Size();
+    }
+
+
 private:
     //启动音频编码线程
     static void StartAudioEncodeThread(MediaRecorder *recorder);

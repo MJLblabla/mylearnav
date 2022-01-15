@@ -60,6 +60,9 @@ public:
     int OnFrame2Encode(AudioFrame *inputFrame);
     //停止录制
     int StopRecord();
+    int getWorkAbleAudioQueueSize(){
+        return m_frameQueue.Size();
+    }
 
 private:
     //编码循环

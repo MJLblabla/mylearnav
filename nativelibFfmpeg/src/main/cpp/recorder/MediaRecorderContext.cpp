@@ -6,7 +6,7 @@
 #include "LogUtil.h"
 #include "ImageDef.h"
 #include "MediaRecorderContext.h"
-#include "myyuvutil.h"
+#include "libyuv.h"
 
 jfieldID MediaRecorderContext::s_ContextHandle = 0L;
 
@@ -14,6 +14,7 @@ MediaRecorderContext::MediaRecorderContext() {
 }
 
 MediaRecorderContext::~MediaRecorderContext() {
+    LOGCATE("MediaRecorderContext::~MediaRecorderContext()");
 }
 
 void MediaRecorderContext::CreateContext(JNIEnv *env, jobject instance) {
@@ -73,6 +74,7 @@ int
 MediaRecorderContext::StartRecord(int recorderType, const char *outUrl, int frameWidth,
                                   int frameHeight, long videoBitRate,
                                   int fps) {
+    isStart = true;
     LOGCATE("MediaRecorderContext::StartRecord recorderType=%d, outUrl=%s, [w,h]=[%d,%d], videoBitRate=%ld, fps=%d",
             recorderType, outUrl, frameWidth, frameHeight, videoBitRate, fps);
     std::unique_lock<std::mutex> lock(m_mutex);
@@ -114,6 +116,8 @@ MediaRecorderContext::StartRecord(int recorderType, const char *outUrl, int fram
 }
 
 int MediaRecorderContext::StopRecord() {
+    isStart = false;
+    LOGCATE("MediaRecorderContext::StopRecord");
     std::unique_lock<std::mutex> lock(m_mutex);
     if (m_pVideoRecorder != nullptr) {
         m_pVideoRecorder->StopRecord();
@@ -137,6 +141,15 @@ int MediaRecorderContext::StopRecord() {
 
 void MediaRecorderContext::OnAudioData(uint8_t *pData, int size) {
     LOGCATE("MediaRecorderContext::OnAudioData pData=%p, dataSize=%d", pData, size);
+
+    if (!isStart)
+        return;
+    if (m_pAudioRecorder != nullptr && m_pAudioRecorder->getWorkAbleAudioQueueSize() > 5)
+        return;
+
+    if (m_pAVRecorder != nullptr && m_pAVRecorder->getWorkAbleAudioQueueSize() > 5)
+        return;
+
     AudioFrame audioFrame(pData, size, false);
     if (m_pAudioRecorder != nullptr)
         m_pAudioRecorder->OnFrame2Encode(&audioFrame);
@@ -150,28 +163,60 @@ MediaRecorderContext::OnVideoFrame(void *ctx, int format, uint8_t *pBuffer, int 
                                    int heightsrc, int size) {
     LOGCATE("MediaRecorderContext::UpdateFrame format=%d, width=%d, height=%d, pData=%p",
             format, widthsrc, heightsrc, pBuffer);
-    NativeImage *nativeImage = new NativeImage();
-    uint8_t *src_yuv = nullptr;
 
+    if (!isStart)
+        return;
+
+    if (m_pVideoRecorder != nullptr) {
+        if (m_pVideoRecorder->getWorkAbleVideoQueueSize() > 5) {
+            return;
+        }
+    }
+
+    if (m_pAVRecorder != nullptr) {
+        if (m_pAVRecorder->getWorkAbleVideoQueueSize() > 5) {
+            return;
+        }
+    }
+
+    NativeImage *nativeImage = new NativeImage();
+
+    uint8_t *src_yuv = nullptr;
+    int src_y_size = widthsrc * heightsrc;
+    int src_u_size = (widthsrc >> 1) * (heightsrc >> 1);
+    src_yuv = static_cast<uint8_t *>(malloc(widthsrc * heightsrc * 3 / 2));
     switch (format) {
-        case IMAGE_FORMAT_NV12:
-        case IMAGE_FORMAT_NV21:
-            src_yuv = static_cast<uint8_t *>(malloc(size));
-            nv21ToI420(pBuffer, widthsrc, heightsrc, src_yuv);
+        case IMAGE_FORMAT_I420:
+            memcpy(src_yuv, pBuffer, size);
             break;
-        default:
-            src_yuv = pBuffer;
+        case IMAGE_FORMAT_NV12:
+            libyuv::NV12ToI420(pBuffer, widthsrc,
+                               pBuffer + src_y_size, widthsrc,
+                               src_yuv, widthsrc,
+                               src_yuv + src_y_size, widthsrc >> 1,
+                               src_yuv + src_y_size + src_u_size, widthsrc >> 1,
+                               widthsrc, heightsrc);
+            break;
+        case IMAGE_FORMAT_NV21:
+
+            libyuv::NV21ToI420(pBuffer, widthsrc,
+                               pBuffer + src_y_size, widthsrc,
+                               src_yuv, widthsrc,
+                               src_yuv + src_y_size, widthsrc >> 1,
+                               src_yuv + src_y_size + src_u_size, widthsrc >> 1,
+                               widthsrc, heightsrc);
+
+            break;
+        case IMAGE_FORMAT_RGBA:
+            libyuv::ABGRToI420(pBuffer, widthsrc * 4,
+                               src_yuv, widthsrc,
+                               src_yuv + src_y_size, widthsrc >> 1,
+                               src_yuv + src_y_size + src_u_size, widthsrc >> 1,
+                               widthsrc, heightsrc);
+            //  Jni_RgbaToI420(pBuffer,src_yuv, widthsrc, heightsrc);
             break;
     }
-//
-//    uint8_t *rotateyuv = static_cast<uint8_t *>(malloc(size));
-//    rotateI420(src_yuv, widthsrc, heightsrc, rotateyuv, 90);
-//    int width = heightsrc;
-//    int height = widthsrc;
-//
 
-    uint8_t *rotateyuv = src_yuv;//static_cast<uint8_t *>(malloc(size));
-    // rotateI420(src_yuv, widthsrc, heightsrc, rotateyuv, 90);
     int width = widthsrc;
     int height = heightsrc;
 
@@ -179,38 +224,25 @@ MediaRecorderContext::OnVideoFrame(void *ctx, int format, uint8_t *pBuffer, int 
     nativeImage->height = height;
     nativeImage->format = IMAGE_FORMAT_I420;
 
-
-
-    int size1 = nativeImage->width * nativeImage->height;
-    int size2 = nativeImage->width * nativeImage->height / 4;
-    int size3 = nativeImage->width * nativeImage->height / 4;
-    nativeImage->ppPlane[0] = static_cast<uint8_t *>(malloc(
-            size1));
-    nativeImage->ppPlane[1] = static_cast<uint8_t *>(malloc(
-            size2));
-    nativeImage->ppPlane[2] = static_cast<uint8_t *>(malloc(
-            size3));
-
-    memcpy(nativeImage->ppPlane[0], rotateyuv, size1);
-    memcpy(nativeImage->ppPlane[1], rotateyuv + nativeImage->width * nativeImage->height,
-           size2);
-    memcpy(nativeImage->ppPlane[2],
-           rotateyuv + nativeImage->width * nativeImage->height * 5 / 4,
-           size3);
+    nativeImage->ppPlane[0] = src_yuv;
+    nativeImage->ppPlane[1] = src_yuv + src_y_size;
+    nativeImage->ppPlane[2] = src_yuv + src_y_size + src_u_size;
 
     nativeImage->pLineSize[0] = width;
     nativeImage->pLineSize[1] = width / 2;
     nativeImage->pLineSize[2] = width / 2;
+
+    LOGCATE("MediaRecorderContext::UpdateFrame2 format=%d, width=%d, height=%d, pData=%p",
+            format, widthsrc, heightsrc, pBuffer);
 
     if (m_pVideoRecorder != nullptr)
         m_pVideoRecorder->OnFrame2Encode(nativeImage);
 
     if (m_pAVRecorder != nullptr)
         m_pAVRecorder->OnFrame2Encode(nativeImage);
-    if(format==IMAGE_FORMAT_NV21){
-        free(src_yuv);
-        src_yuv= nullptr;
-    }
+   // free(src_yuv);
+    src_yuv = nullptr;
+
 }
 
 

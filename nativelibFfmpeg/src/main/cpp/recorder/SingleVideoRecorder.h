@@ -29,6 +29,11 @@ public:
     int OnFrame2Encode(NativeImage *inputFrame);
     int StopRecord();
 
+    int getWorkAbleVideoQueueSize(){
+        return m_frameQueue.Size();
+    }
+
+
 private:
     static void StartH264EncoderThread(SingleVideoRecorder *context);
     int EncodeFrame(AVFrame *pFrame);

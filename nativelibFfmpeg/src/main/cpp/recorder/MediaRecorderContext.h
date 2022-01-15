@@ -39,6 +39,7 @@ public:
 
 
 private:
+    bool  isStart = false;
     static jfieldID s_ContextHandle;
 
     static void StoreContext(JNIEnv *env, jobject instance, MediaRecorderContext *pContext);

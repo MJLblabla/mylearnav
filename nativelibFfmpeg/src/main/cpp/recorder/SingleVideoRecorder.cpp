@@ -217,14 +217,8 @@ void SingleVideoRecorder::StartH264EncoderThread(SingleVideoRecorder *recorder) 
 int SingleVideoRecorder::OnFrame2Encode(NativeImage *inputFrame) {
     if(m_exit) return 0;
     LOGCATE("SingleVideoRecorder::OnFrame2Encode [w,h,format]=[%d,%d,%d]", inputFrame->width, inputFrame->height, inputFrame->format);
-    NativeImage *pImage = new NativeImage();
-    pImage->width = inputFrame->width;
-    pImage->height = inputFrame->height;
-    pImage->format = inputFrame->format;
-    NativeImageUtil::AllocNativeImage(pImage);
-    NativeImageUtil::CopyNativeImage(inputFrame, pImage);
     //NativeImageUtil::DumpNativeImage(pImage, "/sdcard", "camera");
-    m_frameQueue.Push(pImage);
+    m_frameQueue.Push(inputFrame);
     return 0;
 }
 
