@@ -47,18 +47,14 @@ JNIEXPORT void JNICALL
 Java_com_cxp_nativelibffmpeg_MediaRecorderContext_native_1OnVideoData__I_3BII(JNIEnv *env,
                                                                               jobject thiz,
                                                                               jint format,
-                                                                              jbyteArray data,
+                                                                              jbyteArray j_array,
                                                                               jint width,
                                                                               jint height) {
     MediaRecorderContext *pContext = MediaRecorderContext::GetContext(env, thiz);
-    int len = env->GetArrayLength(data);
-    unsigned char *buf = new unsigned char[len];
-    env->GetByteArrayRegion(data, 0, len, reinterpret_cast<jbyte *>(buf));
-    int sizeOrigin = sizeof(buf);
-    pContext->OnVideoFrame(thiz, format, buf, width, height,len);
-    free(buf);
-    buf= nullptr;
-
+    jbyte *c_array = env->GetByteArrayElements(j_array, 0);
+    int len_arr = env->GetArrayLength(j_array);
+    pContext->OnVideoFrame(thiz, format, reinterpret_cast<uint8_t *>(c_array), width, height, len_arr);
+    env->ReleaseByteArrayElements(j_array, c_array, 0);
 }
 extern "C"
 JNIEXPORT void JNICALL
@@ -70,11 +66,10 @@ Java_com_cxp_nativelibffmpeg_MediaRecorderContext_native_1StopRecord__(JNIEnv *e
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_cxp_nativelibffmpeg_MediaRecorderContext_native_1OnAudioData(JNIEnv *env, jobject thiz,
-                                                                      jbyteArray data) {
-    int len = env->GetArrayLength(data);
-    unsigned char *buf = new unsigned char[len];
-    env->GetByteArrayRegion(data, 0, len, reinterpret_cast<jbyte *>(buf));
+                                                                      jbyteArray j_array) {
+    jbyte *c_array = env->GetByteArrayElements(j_array, 0);
+    int len_arr = env->GetArrayLength(j_array);
     MediaRecorderContext *pContext = MediaRecorderContext::GetContext(env, thiz);
-    if (pContext) pContext->OnAudioData(buf, len);
-    delete[] buf;
+    if (pContext) pContext->OnAudioData(reinterpret_cast<uint8_t *>(c_array), len_arr);
+    env->ReleaseByteArrayElements(j_array, c_array, 0);
 }
