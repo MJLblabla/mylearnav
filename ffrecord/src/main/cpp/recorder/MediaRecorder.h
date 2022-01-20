@@ -54,6 +54,8 @@ public:
     SwsContext *m_pSwsCtx;
     SwrContext *m_pSwrCtx;
     uint8_t *pFrameBuffer;
+    //编码的数据包
+    AVPacket        *m_Packet = nullptr;
 };
 
 struct RecorderParam {

@@ -74,7 +74,7 @@ class MainActivity : AppCompatActivity() {
            // var byteArray = CameraUtil.getDataFromImage(image, CameraUtil.COLOR_FormatNV21)
 
             rgbaProducer.parseImg(image)
-            consumerBuffer.addRgbQueen(rgbaProducer.rgbaByteArray!!,rgbaProducer.mWidth,rgbaProducer.mHeight,rgbaProducer.pixelStride,rgbaProducer.rowPadding)
+           // consumerBuffer.addRgbQueen(rgbaProducer.rgbaByteArray!!,rgbaProducer.mWidth,rgbaProducer.mHeight,rgbaProducer.pixelStride,rgbaProducer.rowPadding)
             mediaRecorderContext.native_OnVideoData(IMAGE_FORMAT_RGBA, rgbaProducer.rgbaByteArray, w, h);
             Log.d("mjl", "onImageProxy finish ${w}  ${h} ${image.imageInfo.rotationDegrees}")
 

@@ -349,12 +349,13 @@ int MediaRecorder::EncodeAudioFrame(AVOutputStream *ost) {
     LOGCATE("MediaRecorder::EncodeAudioFrame");
     int result = 0;
     AVCodecContext *c;
-    AVPacket pkt = {0}; // data and size must be 0;
     AVFrame *frame;
     int ret;
     int dst_nb_samples;
 
-    av_init_packet(&pkt);
+    if(ost->m_Packet== nullptr){
+        ost->m_Packet =  av_packet_alloc();
+    }
     c = ost->m_pCodecCtx;
 
     while (m_AudioFrameQueue.Empty() && !m_Exit) {
@@ -390,7 +391,6 @@ int MediaRecorder::EncodeAudioFrame(AVOutputStream *ost) {
             result = 1;
             goto EXIT;
         }
-
         /* convert to destination format */
         ret = swr_convert(ost->m_pSwrCtx,
                           ost->m_pFrame->data, dst_nb_samples,
@@ -421,7 +421,7 @@ int MediaRecorder::EncodeAudioFrame(AVOutputStream *ost) {
     }
 
     while (!ret) {
-        ret = avcodec_receive_packet(c, &pkt);
+        ret = avcodec_receive_packet(c, ost->m_Packet);
         if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
             result = 0;
             goto EXIT;
@@ -431,8 +431,8 @@ int MediaRecorder::EncodeAudioFrame(AVOutputStream *ost) {
             result = 0;
             goto EXIT;
         }
-        LOGCATE("MediaRecorder::EncodeAudioFrame pkt pts=%ld, size=%d", pkt.pts, pkt.size);
-        int result = WritePacket(m_FormatCtx, &c->time_base, ost->m_pStream, &pkt);
+        LOGCATE("MediaRecorder::EncodeAudioFrame pkt pts=%ld, size=%d", ost->m_Packet->pts, ost->m_Packet->size);
+        int result = WritePacket(m_FormatCtx, &c->time_base, ost->m_pStream, ost->m_Packet);
         if (result < 0) {
             LOGCATE("MediaRecorder::EncodeAudioFrame audio Error while writing audio frame: %s",
                     av_err2str(ret));
@@ -442,7 +442,7 @@ int MediaRecorder::EncodeAudioFrame(AVOutputStream *ost) {
     }
 
     EXIT:
-    av_packet_unref(&pkt);
+    av_packet_unref(ost->m_Packet);
     if (audioFrame) delete audioFrame;
     return result;
 }
@@ -484,16 +484,26 @@ int MediaRecorder::OpenVideo(AVFormatContext *oc, AVCodec *codec, AVOutputStream
 
     /* allocate and init a re-usable frame */
     ost->m_pFrame = AllocVideoFrame(c->pix_fmt, c->width, c->height);
-    ost->m_pTmpFrame = av_frame_alloc();
-    if (!ost->m_pFrame) {
-        LOGCATE("MediaRecorder::OpenVideo Could not allocate video frame");
-        return -1;
-    }
-
-    int bufferSize = av_image_get_buffer_size(c->pix_fmt, c->width,
-                                              c->height, 1);
-    ost->pFrameBuffer = (uint8_t *) av_malloc(bufferSize);
+//    ost->m_pTmpFrame = av_frame_alloc();
+//    if (!ost->m_pFrame) {
+//        LOGCATE("MediaRecorder::OpenVideo Could not allocate video frame");
+//        return -1;
+//    }
+//
+//    int bufferSize = av_image_get_buffer_size(c->pix_fmt, c->width,
+//                                              c->height, 1);
+//    ost->pFrameBuffer = (uint8_t *) av_malloc(bufferSize);
     /* copy the stream parameters to the muxer */
+
+    //preset: ultrafast, superfast, veryfast, faster, fast,
+//medium, slow, slower, veryslow, placebo
+    av_opt_set(c->priv_data, "preset", "ultrafast", 0);
+//tune: film, animation, grain, stillimage, psnr,
+//ssim, fastdecode, zerolatency
+    av_opt_set(c->priv_data, "tune", "zerolatency", 0);
+//profile: baseline, main, high, high10, high422, high444
+    av_opt_set(c->priv_data, "profile", "main", 0);
+
     ret = avcodec_parameters_from_context(ost->m_pStream->codecpar, c);
     if (ret < 0) {
         LOGCATE("MediaRecorder::OpenVideo Could not copy the stream parameters");
@@ -508,11 +518,10 @@ int MediaRecorder::EncodeVideoFrame(AVOutputStream *ost) {
     int ret;
     AVCodecContext *c;
     AVFrame *frame;
-    AVPacket pkt = { 0 };
-
+    if(ost->m_Packet== nullptr){
+        ost->m_Packet =  av_packet_alloc();
+    }
     c = ost->m_pCodecCtx;
-
-    av_init_packet(&pkt);
 
     while (m_VideoFrameQueue.Empty() && !m_Exit) {
         usleep(10* 1000);
@@ -531,24 +540,6 @@ int MediaRecorder::EncodeVideoFrame(AVOutputStream *ost) {
         frame->width = videoFrame->width;
         frame->height = videoFrame->height;
         frame->format=srcPixFmt;
-//
-//        switch (videoFrame->format) {
-//            case IMAGE_FORMAT_RGBA:
-//                srcPixFmt = AV_PIX_FMT_RGBA;
-//                break;
-//            case IMAGE_FORMAT_NV21:
-//                srcPixFmt = AV_PIX_FMT_NV21;
-//                break;
-//            case IMAGE_FORMAT_NV12:
-//                srcPixFmt = AV_PIX_FMT_NV12;
-//                break;
-//            case IMAGE_FORMAT_I420:
-//                srcPixFmt = AV_PIX_FMT_YUV420P;
-//                break;
-//            default:
-//                LOGCATE("MediaRecorder::EncodeVideoFrame unSupport format pImage->format=%d", videoFrame->format);
-//                break;
-//        }
     }
 
     if((m_VideoFrameQueue.Empty() && m_Exit) || ost->m_EncodeEnd) frame = nullptr;
@@ -560,45 +551,9 @@ int MediaRecorder::EncodeVideoFrame(AVOutputStream *ost) {
             result = 1;
             goto EXIT;
         }
-
-//        if (srcPixFmt != AV_PIX_FMT_YUV420P) {
-//            /* as we only generate a YUV420P picture, we must convert it
-//             * to the codec pixel format if needed */
-//            if (!ost->m_pSwsCtx) {
-//                ost->m_pSwsCtx = sws_getContext(c->width, c->height,
-//                                                srcPixFmt,
-//                                                c->width, c->height,
-//                                                c->pix_fmt,
-//                                                SWS_FAST_BILINEAR, nullptr, nullptr, nullptr);
-//                if (!ost->m_pSwsCtx) {
-//                    LOGCATE("MediaRecorder::EncodeVideoFrame Could not initialize the conversion context\n");
-//                    result = 1;
-//                    goto EXIT;
-//                }
-//            }
-//            sws_scale(ost->m_pSwsCtx, (const uint8_t * const *) frame->data,
-//                      frame->linesize, 0, c->height, ost->m_pFrame->data,
-//                      ost->m_pFrame->linesize);
-//        }
         frame->pts = ost->m_NextPts++;
-     //   frame = ost->m_pFrame;
     }
 
-//    if(frame) {
-//        NativeImage i420;
-//        i420.format = IMAGE_FORMAT_I420;
-//        i420.width = frame->width;
-//        i420.height = frame->height;
-//        i420.ppPlane[0] = frame->data[0];
-//        i420.ppPlane[1] = frame->data[1];
-//        i420.ppPlane[2] = frame->data[2];
-//        i420.pLineSize[0] = frame->linesize[0];
-//        i420.pLineSize[1] = frame->linesize[1];
-//        i420.pLineSize[2] = frame->linesize[2];
-//        NativeImageUtil::DumpNativeImage(&i420, "/sdcard/DCIM", "media");
-//    }
-
-    /* encode the image */
     ret = avcodec_send_frame(c, frame);
     if(ret == AVERROR_EOF) {
         result = 1;
@@ -610,7 +565,7 @@ int MediaRecorder::EncodeVideoFrame(AVOutputStream *ost) {
     }
 
     while(!ret) {
-        ret = avcodec_receive_packet(c, &pkt);
+        ret = avcodec_receive_packet(c, ost->m_Packet);
         if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
             result = 0;
             goto EXIT;
@@ -619,8 +574,8 @@ int MediaRecorder::EncodeVideoFrame(AVOutputStream *ost) {
             result = 0;
             goto EXIT;
         }
-        LOGCATE("MediaRecorder::EncodeVideoFrame video pkt pts=%ld, size=%d", pkt.pts, pkt.size);
-        int result = WritePacket(m_FormatCtx, &c->time_base, ost->m_pStream, &pkt);
+        LOGCATE("MediaRecorder::EncodeVideoFrame video pkt pts=%ld, size=%d", ost->m_Packet->pts, ost->m_Packet->size);
+        int result = WritePacket(m_FormatCtx, &c->time_base, ost->m_pStream, ost->m_Packet);
         if (result < 0) {
             LOGCATE("MediaRecorder::EncodeVideoFrame video Error while writing audio frame: %s",
                     av_err2str(ret));
@@ -630,7 +585,7 @@ int MediaRecorder::EncodeVideoFrame(AVOutputStream *ost) {
     }
 
     EXIT:
-    av_packet_unref(&pkt);
+    av_packet_unref(ost->m_Packet);
     NativeImageUtil::FreeNativeImage(videoFrame);
     if(videoFrame) delete videoFrame;
     return result;
@@ -646,6 +601,10 @@ void MediaRecorder::CloseStream(AVOutputStream *ost) {
     if (ost->m_pTmpFrame != nullptr) {
         av_free(ost->m_pTmpFrame);
         ost->m_pTmpFrame = nullptr;
+    }
+    if(ost->m_Packet!=nullptr){
+        av_packet_free(&(ost->m_Packet));
+        ost->m_Packet= nullptr;
     }
 
 }
