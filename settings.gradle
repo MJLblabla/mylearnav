@@ -9,7 +9,9 @@ dependencyResolutionManagement {
 }
 rootProject.name = "MyFfmpegLearn"
 include ':app'
-include ':nativelibFfmpeg'
+include ':ffrecord'
 include ':libyuv'
 include ':mediasoupRTC'
 include ':webrtc1v1'
+
+include ':ffplay'

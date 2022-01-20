@@ -58,7 +58,7 @@ struct SetJmpErrorMgr;
 // MJPEG ("Motion JPEG") is a pseudo-standard video codec where the frames are
 // simply independent JPEG images with a fixed huffman table (which is omitted).
 // It is rarely used in video transmission, but is common as a camera capture
-// format, especially in Logitech devices. This class implements a decoder for
+// format, especially in Logitech devices. This class implements a play.decoder for
 // MJPEG frames.
 //
 // See http://tools.ietf.org/html/rfc2435

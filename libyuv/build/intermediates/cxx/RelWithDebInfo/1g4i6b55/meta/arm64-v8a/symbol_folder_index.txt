@@ -1,1 +1,0 @@
-/Users/manjialle/AndroidStudioProjects/mylearnav/libyuv/build/intermediates/cxx/RelWithDebInfo/1g4i6b55/obj/arm64-v8a

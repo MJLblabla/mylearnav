@@ -12,9 +12,10 @@
           <set>
             <option value="$PROJECT_DIR$" />
             <option value="$PROJECT_DIR$/app" />
+            <option value="$PROJECT_DIR$/ffplay" />
+            <option value="$PROJECT_DIR$/ffrecord" />
             <option value="$PROJECT_DIR$/libyuv" />
             <option value="$PROJECT_DIR$/mediasoupRTC" />
-            <option value="$PROJECT_DIR$/nativelibFfmpeg" />
             <option value="$PROJECT_DIR$/webrtc1v1" />
           </set>
         </option>

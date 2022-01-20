@@ -12,5 +12,8 @@ class StartActivity : AppCompatActivity() {
         record.setOnClickListener {
             startActivity(Intent(this,MainActivity::class.java))
         }
+        player.setOnClickListener {
+            startActivity(Intent(this,playeractivity::class.java))
+        }
     }
 }

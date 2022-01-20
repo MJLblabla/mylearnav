@@ -3,7 +3,6 @@
     package="com.cxp.myffmpeglearn">
 
     <uses-feature android:name="android.hardware.camera.any" />
-
     <uses-feature android:name="android.hardware.camera" />
     <uses-feature android:name="android.hardware.camera.autofocus" />
 
@@ -24,6 +23,9 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.MyFfmpegLearn">
         <activity
+            android:name=".playeractivity"
+            android:exported="false" />
+        <activity
             android:name=".RtcActivity"
             android:exported="true" />
         <activity
@@ -37,7 +39,7 @@
         </activity>
         <activity
             android:name=".MainActivity"
-            android:exported="true"></activity>
+            android:exported="true" />
     </application>
 
 </manifest>

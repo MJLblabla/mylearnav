@@ -1,2 +1,0 @@
-/Users/manjialle/AndroidStudioProjects/mylearnav/libyuv/CMakeLists.txt
-/Users/manjialle/AndroidStudioProjects/mylearnav/libyuv/src/main/cpp/libyuv/CMakeLists.txt

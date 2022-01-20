@@ -30,18 +30,6 @@
       "output": "/Users/manjialle/AndroidStudioProjects/mylearnav/libyuv/.cxx/Debug/5u6u92r6/x86/build/libyuv.a",
       "runtimeFiles": []
     },
-    "yuvconvert-Debug-x86": {
-      "artifactName": "yuvconvert",
-      "buildCommandComponents": [
-        "/Users/manjialle/Library/Android/sdk/cmake/3.10.2.4988404/bin/ninja",
-        "-C",
-        "/Users/manjialle/AndroidStudioProjects/mylearnav/libyuv/.cxx/Debug/5u6u92r6/x86",
-        "yuvconvert"
-      ],
-      "abi": "x86",
-      "output": "/Users/manjialle/AndroidStudioProjects/mylearnav/libyuv/build/intermediates/cxx/Debug/5u6u92r6/obj/x86/yuvconvert",
-      "runtimeFiles": []
-    },
     "yuv_shared-Debug-x86": {
       "artifactName": "yuv_shared",
       "buildCommandComponents": [
@@ -52,6 +40,18 @@
       ],
       "abi": "x86",
       "output": "/Users/manjialle/AndroidStudioProjects/mylearnav/libyuv/build/intermediates/cxx/Debug/5u6u92r6/obj/x86/libyuv.so",
+      "runtimeFiles": []
+    },
+    "yuvconvert-Debug-x86": {
+      "artifactName": "yuvconvert",
+      "buildCommandComponents": [
+        "/Users/manjialle/Library/Android/sdk/cmake/3.10.2.4988404/bin/ninja",
+        "-C",
+        "/Users/manjialle/AndroidStudioProjects/mylearnav/libyuv/.cxx/Debug/5u6u92r6/x86",
+        "yuvconvert"
+      ],
+      "abi": "x86",
+      "output": "/Users/manjialle/AndroidStudioProjects/mylearnav/libyuv/build/intermediates/cxx/Debug/5u6u92r6/obj/x86/yuvconvert",
       "runtimeFiles": []
     },
     "yuvutil-Debug-x86": {
