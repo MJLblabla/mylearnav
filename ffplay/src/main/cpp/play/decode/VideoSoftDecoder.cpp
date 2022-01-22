@@ -187,8 +187,8 @@ void VideoSoftDecoder::dealPackQueue() {
         }
         //一个 packet 包含多少 frame?
         int frameCount = 0;
-        int ret = avcodec_receive_frame(m_AVCodecContext, m_Frame);
-        while ( ret >= 0) {
+
+        while (avcodec_receive_frame(m_AVCodecContext, m_Frame) >= 0) {
             //同步
             UpdateTimeStamp();
             AVSync();
@@ -267,14 +267,7 @@ void VideoSoftDecoder::dealPackQueue() {
 
             LOGCATE("DecoderBase::DecodeOnePacket 0001 m_MediaType=%d");
             frameCount++;
-
             LOGCATE("BaseDecoder::DecodeOneFrame frameCount=%d", frameCount);
-            //判断一个 packet 是否解码完成
-           /* if (frameCount > 0) {
-                ret =-1;
-            } else{*/
-                ret = avcodec_receive_frame(m_AVCodecContext, m_Frame);
-           // }
         }
         av_packet_unref(m_Packet);
     }

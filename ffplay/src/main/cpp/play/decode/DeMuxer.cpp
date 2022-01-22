@@ -16,7 +16,8 @@ void DeMuxer::init(DecoderType decoderType) {
     }
     m_VideoDecoder = new VideoSoftDecoder();
     m_VideoDecoder->init();
-    m_VideoDecoder->SetAVSyncCallback(m_AudioDecoder,AudioDecoder::GetVideoDecoderTimestampForAVSync);
+    m_VideoDecoder->SetAVSyncCallback(m_AudioDecoder,
+                                      AudioDecoder::GetVideoDecoderTimestampForAVSync);
 }
 
 
@@ -137,12 +138,12 @@ void DeMuxer::seekToPosition(float position) {
 }
 
 long DeMuxer::getCurrentPosition() {
-   return m_AudioDecoder->getCurrentPosition();
+    return m_AudioDecoder->getCurrentPosition();
 }
 
 void DeMuxer::setMessageCallback(void *context, MessageCallback callback) {
-    m_VideoDecoder->setMessageCallback(context,callback);
-    m_AudioDecoder->setMessageCallback(context,callback);
+    m_VideoDecoder->setMessageCallback(context, callback);
+    m_AudioDecoder->setMessageCallback(context, callback);
 }
 
 void DeMuxer::doAVDecoding(DeMuxer *deMuxer) {
@@ -201,10 +202,13 @@ int DeMuxer::decodeOnePacket() {
     AVPacket avPacket = {0};
     int result = av_read_frame(m_AVFormatContext, &avPacket);
     if (result >= 0) {
-        int buffersize = m_VideoDecoder->getBufferSize();
+        int buffersizeVideo = m_VideoDecoder->getBufferSize();
+        int buffersizeAudio = m_AudioDecoder->getBufferSize();
         //防止缓冲数据包过多
-        while (buffersize > 5 && m_DecoderState == STATE_DECODING && m_SeekPosition < 0) {
-            buffersize = m_VideoDecoder->getBufferSize();
+        while ((buffersizeVideo > 5 || buffersizeAudio > 5) && m_DecoderState == STATE_DECODING &&
+               m_SeekPosition < 0) {
+            buffersizeVideo = m_VideoDecoder->getBufferSize();
+            buffersizeAudio = m_AudioDecoder->getBufferSize();
             usleep(5 * 1000);
         }
         if (avPacket.stream_index == m_VideoDecoder->getStreamIdx()) {
