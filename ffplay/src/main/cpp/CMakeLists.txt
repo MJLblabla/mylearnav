@@ -13,7 +13,7 @@ include_directories(
         ${CMAKE_SOURCE_DIR}/util
         ${CMAKE_SOURCE_DIR}/common
         ${CMAKE_SOURCE_DIR}/play
-        ${CMAKE_SOURCE_DIR}/play/decoder
+        ${CMAKE_SOURCE_DIR}/play/decode
         ${CMAKE_SOURCE_DIR}/play/render
         ${CMAKE_SOURCE_DIR}/play/render/audio
         ${CMAKE_SOURCE_DIR}/play/render/video)
@@ -26,7 +26,7 @@ file(GLOB src-files
         ${CMAKE_SOURCE_DIR}/util/*.cpp
         ${CMAKE_SOURCE_DIR}/common/*.cpp
         ${CMAKE_SOURCE_DIR}/play/*.cpp
-        ${CMAKE_SOURCE_DIR}/play/decoder/*.cpp
+        ${CMAKE_SOURCE_DIR}/play/decode/*.cpp
         ${CMAKE_SOURCE_DIR}/play/render/video/*.cpp
         ${CMAKE_SOURCE_DIR}/play/render/audio/*.cpp
         )

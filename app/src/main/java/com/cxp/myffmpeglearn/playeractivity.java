@@ -79,7 +79,7 @@ public class playeractivity extends AppCompatActivity implements FFPlayEngine.Ev
         mMediaPlayer = new FFPlayEngine();
 
         mMediaPlayer.addEventCallback(this);
-        mMediaPlayer.setUrl(mVideoPath);
+        mMediaPlayer.setUrl();
         mMediaPlayer.setVideoPlayerRender(render);
     }
 
@@ -91,7 +91,7 @@ public class playeractivity extends AppCompatActivity implements FFPlayEngine.Ev
             ActivityCompat.requestPermissions(this, REQUEST_PERMISSIONS, PERMISSION_REQUEST_CODE);
         } else {
             if(mMediaPlayer != null)
-                mMediaPlayer.play();
+                mMediaPlayer.play(mVideoPath);
         }
 
     }

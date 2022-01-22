@@ -43,9 +43,11 @@ Java_com_mjl_ffplay_FFPlayEngine_nativePause(JNIEnv *env, jobject thiz, jlong na
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_mjl_ffplay_FFPlayEngine_nativePlay(JNIEnv *env, jobject thiz, jlong native_engine_ctr) {
+Java_com_mjl_ffplay_FFPlayEngine_nativePlay(JNIEnv *env, jobject thiz, jlong native_engine_ctr,jstring jurl) {
+    const char *url = env->GetStringUTFChars(jurl, nullptr);
     FFMediaPlayer *ffMediaPlayer = reinterpret_cast<FFMediaPlayer *>(native_engine_ctr);
-    ffMediaPlayer->Play();
+    ffMediaPlayer->Play(const_cast<char *>(url));
+    env->ReleaseStringUTFChars(jurl, url);
 }
 
 extern "C"
@@ -58,12 +60,9 @@ Java_com_mjl_ffplay_FFPlayEngine_nativeSeekToPosition(JNIEnv *env, jobject thiz,
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_mjl_ffplay_FFPlayEngine_nativeSetUpUrl(JNIEnv *env, jobject thiz, jlong native_engine_ctr,
-                                                jstring jurl) {
+Java_com_mjl_ffplay_FFPlayEngine_nativeSetUpUrl(JNIEnv *env, jobject thiz, jlong native_engine_ctr) {
     FFMediaPlayer *ffMediaPlayer = reinterpret_cast<FFMediaPlayer *>(native_engine_ctr);
-    const char *url = env->GetStringUTFChars(jurl, nullptr);
-    ffMediaPlayer->Init(env, thiz, const_cast<char *>(url));
-    env->ReleaseStringUTFChars(jurl, url);
+    ffMediaPlayer->Init(env, thiz);
 }
 
 extern "C"

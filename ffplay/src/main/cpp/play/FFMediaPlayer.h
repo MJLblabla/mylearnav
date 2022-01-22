@@ -11,11 +11,7 @@
 #define LEARNFFMPEG_FFMEDIAPLAYER_H
 
 #include <jni.h>
-#include "decoder/VideoDecoder.h"
-#include "decoder/AudioDecoder.h"
-#include "render/audio/AudioRender.h"
-#include "render/video/VideoRender.h"
-#include "render/audio/OpenSLRender.h"
+#include "decode/DeMuxer.h"
 
 #define JAVA_PLAYER_EVENT_CALLBACK_API_NAME "playerEventCallback"
 #define MEDIA_PARAM_VIDEO_WIDTH         0x0001
@@ -27,18 +23,17 @@
 class FFMediaPlayer {
 public:
 
-
     FFMediaPlayer() {};
 
     ~FFMediaPlayer() {};
 
-    void Init(JNIEnv *jniEnv, jobject obj, char *url);
+    void Init(JNIEnv *jniEnv, jobject obj);
 
     void UnInit();
 
     void setVideoPlayerRender(VideoRender *videoRender);
 
-    void Play();
+    void Play( char *url);
 
     void Pause();
 
@@ -50,19 +45,14 @@ public:
 
 private:
 
+    DeMuxer *muxer =  nullptr;
     static void PostMessage(void *context, int msgType, float msgCode);
 
-    VideoDecoder *m_VideoDecoder = nullptr;
-    AudioDecoder *m_AudioDecoder = nullptr;
+    JNIEnv *GetJNIEnv(bool *isAttach);
 
-    VideoRender *m_VideoRender = nullptr;
-    AudioRender *m_AudioRender = nullptr;
+    jobject GetJavaObj();
 
-     JNIEnv *GetJNIEnv(bool *isAttach) ;
-
-     jobject GetJavaObj() ;
-
-     JavaVM *GetJavaVM() ;
+    JavaVM *GetJavaVM();
 
     JavaVM *m_JavaVM = nullptr;
     jobject m_JavaObj = nullptr;

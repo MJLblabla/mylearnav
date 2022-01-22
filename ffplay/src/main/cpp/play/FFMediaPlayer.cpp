@@ -2,49 +2,22 @@
 #include "FFMediaPlayer.h"
 
 
-void FFMediaPlayer::Init(JNIEnv *jniEnv, jobject obj, char *url) {
+void FFMediaPlayer::Init(JNIEnv *jniEnv, jobject obj) {
     jniEnv->GetJavaVM(&m_JavaVM);
     m_JavaObj = jniEnv->NewGlobalRef(obj);
-    m_VideoDecoder = new VideoDecoder(url);
-    m_AudioDecoder = new AudioDecoder(url);
-    m_AudioRender = new OpenSLRender();
-    m_AudioDecoder->SetAudioRender(m_AudioRender);
-
-    m_VideoDecoder->SetMessageCallback(this, PostMessage);
-    m_AudioDecoder->SetMessageCallback(this, PostMessage);
+    muxer = new DeMuxer();
+    muxer->init(SOFT);
+    muxer->setMessageCallback(this, PostMessage);
 }
 
 void FFMediaPlayer::setVideoPlayerRender(VideoRender *videoRender) {
-    m_VideoRender = videoRender;
-    m_VideoDecoder->SetVideoRender(m_VideoRender);
+    muxer->setVideoRender(videoRender);
 }
 
 void FFMediaPlayer::UnInit() {
-    if (m_VideoDecoder) {
-        delete m_VideoDecoder;
-        m_VideoDecoder = nullptr;
-    }
-
-    if (m_VideoRender) {
-        delete m_VideoRender;
-        m_VideoRender = nullptr;
-    }
-
-    if (m_AudioDecoder) {
-        delete m_AudioDecoder;
-        m_AudioDecoder = nullptr;
-    }
-
-    if (m_AudioRender) {
-        delete m_AudioRender;
-        m_AudioRender = nullptr;
-    }
-
-    if (m_VideoRender) {
-        m_VideoRender->UnInit();
-        delete m_VideoRender;
-        m_VideoRender = nullptr;
-    }
+    muxer->unInit();
+    delete muxer;
+    muxer = nullptr;
 
     bool isAttach = false;
     GetJNIEnv(&isAttach)->DeleteGlobalRef(m_JavaObj);
@@ -54,58 +27,40 @@ void FFMediaPlayer::UnInit() {
 }
 
 
-void FFMediaPlayer::Play() {
+void FFMediaPlayer::Play( char *url) {
     LOGCATE("FFMediaPlayer::Play");
-    if (m_VideoDecoder)
-        m_VideoDecoder->Start();
-
-    if (m_AudioDecoder)
-        m_AudioDecoder->Start();
+    muxer->start(url);
 }
 
 void FFMediaPlayer::Pause() {
     LOGCATE("FFMediaPlayer::Pause");
-    if (m_VideoDecoder)
-        m_VideoDecoder->Pause();
-
-    if (m_AudioDecoder)
-        m_AudioDecoder->Pause();
-
+    muxer->pause();
 }
 
 void FFMediaPlayer::Stop() {
     LOGCATE("FFMediaPlayer::Stop");
-    if (m_VideoDecoder)
-        m_VideoDecoder->Stop();
-
-    if (m_AudioDecoder)
-        m_AudioDecoder->Stop();
+    muxer->stop();
 }
 
 void FFMediaPlayer::SeekToPosition(float position) {
     LOGCATE("FFMediaPlayer::SeekToPosition position=%f", position);
-    if (m_VideoDecoder)
-        m_VideoDecoder->SeekToPosition(position);
-
-    if (m_AudioDecoder)
-        m_AudioDecoder->SeekToPosition(position);
-
+    muxer->seekToPosition(position);
 }
 
 long FFMediaPlayer::GetMediaParams(int paramType) {
     LOGCATE("FFMediaPlayer::GetMediaParams paramType=%d", paramType);
     long value = 0;
-    switch (paramType) {
-        case MEDIA_PARAM_VIDEO_WIDTH:
-            value = m_VideoDecoder != nullptr ? m_VideoDecoder->GetVideoWidth() : 0;
-            break;
-        case MEDIA_PARAM_VIDEO_HEIGHT:
-            value = m_VideoDecoder != nullptr ? m_VideoDecoder->GetVideoHeight() : 0;
-            break;
-        case MEDIA_PARAM_VIDEO_DURATION:
-            value = m_VideoDecoder != nullptr ? m_VideoDecoder->GetDuration() : 0;
-            break;
-    }
+//    switch (paramType) {
+//        case MEDIA_PARAM_VIDEO_WIDTH:
+//            value = muxer != nullptr ? muxer->GetVideoWidth() : 0;
+//            break;
+//        case MEDIA_PARAM_VIDEO_HEIGHT:
+//            value = m_VideoDecoder != nullptr ? m_VideoDecoder->GetVideoHeight() : 0;
+//            break;
+//        case MEDIA_PARAM_VIDEO_DURATION:
+//            value = m_VideoDecoder != nullptr ? m_VideoDecoder->GetDuration() : 0;
+//            break;
+//    }
     return value;
 }
 

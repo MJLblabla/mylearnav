@@ -25,16 +25,16 @@ public class FFPlayEngine {
         nativeDestroy(mNativeEngineCtr);
     }
 
-    public void setUrl(String url) {
-        nativeSetUpUrl(mNativeEngineCtr, url);
+    public void setUrl() {
+        nativeSetUpUrl(mNativeEngineCtr);
     }
 
     public void setVideoPlayerRender(OpenGLVideoRender render) {
         nativeSetVideoPlayerRender(mNativeEngineCtr, render.renderHandler);
     }
 
-    public void play() {
-        nativePlay(mNativeEngineCtr);
+    public void play(String url) {
+        nativePlay(mNativeEngineCtr, url);
     }
 
     public void pause() {
@@ -72,11 +72,11 @@ public class FFPlayEngine {
 
     public native  void nativeDestroy(long nativeEngineCtr);
 
-    public native  void nativeSetUpUrl(long nativeEngineCtr, String url);
+    public native  void nativeSetUpUrl(long nativeEngineCtr);
 
     public native  void nativeSetVideoPlayerRender(long nativeEngineCtr, long render);
 
-    public native  void nativePlay(long nativeEngineCtr);
+    public native  void nativePlay(long nativeEngineCtr,String url);
 
     public native  void nativePause(long nativeEngineCtr);
 
