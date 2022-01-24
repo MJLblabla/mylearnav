@@ -3,8 +3,7 @@
 //
 #include <unistd.h>
 #include "DeMuxer.h"
-#include "VideoSoftDecoder.h"
-#include "VideoHWDecoder.h"
+
 
 void DeMuxer::init(DecoderType decoderType) {
     //1.创建封装格式上下文
@@ -12,9 +11,7 @@ void DeMuxer::init(DecoderType decoderType) {
     m_AudioDecoder = new AudioDecoder();
     m_AudioDecoder->init();
 
-    if (decoderType == SOFT) {
-    }
-    m_VideoDecoder = new VideoSoftDecoder();
+    m_VideoDecoder = new VideoDecoder();
     m_VideoDecoder->init();
     m_VideoDecoder->SetAVSyncCallback(m_AudioDecoder,
                                       AudioDecoder::GetVideoDecoderTimestampForAVSync);
@@ -59,12 +56,12 @@ void DeMuxer::start(const char *url) {
     do {
         //2.打开文件
         if (avformat_open_input(&m_AVFormatContext, m_Url, NULL, NULL) != 0) {
-            LOGCATE("DecoderBase::InitFFDecoder avformat_open_input fail.");
+            LOGCATE("DeMuxer::InitFFDecoder avformat_open_input fail.");
             break;
         }
         //3.获取音视频流信息
         if (avformat_find_stream_info(m_AVFormatContext, NULL) < 0) {
-            LOGCATE("DecoderBase::InitFFDecoder avformat_find_stream_info fail.");
+            LOGCATE("DeMuxer::InitFFDecoder avformat_find_stream_info fail.");
             break;
         }
 
@@ -101,7 +98,7 @@ void DeMuxer::start(const char *url) {
 
 
 void DeMuxer::stop() {
-    LOGCATE("DecoderBase::Stop");
+    LOGCATE("DeMuxer::Stop");
     std::unique_lock<std::mutex> lock(m_Mutex);
     m_DecoderState = STATE_STOP;
     m_Cond.notify_all();
@@ -110,6 +107,7 @@ void DeMuxer::stop() {
         delete decoderThread;
         decoderThread = nullptr;
     }
+    LOGCATE("DeMuxer::Stop finish");
     m_VideoDecoder->stop();
     m_AudioDecoder->stop();
 }
@@ -130,7 +128,7 @@ void DeMuxer::resume() {
 }
 
 void DeMuxer::seekToPosition(float position) {
-    LOGCATE("DecoderBase::SeekToPosition position=%f", position);
+    LOGCATE("DeMuxer::SeekToPosition position=%f", position);
     std::unique_lock<std::mutex> lock(m_Mutex);
     m_SeekPosition = position;
     m_DecoderState = STATE_DECODING;
@@ -151,32 +149,34 @@ void DeMuxer::doAVDecoding(DeMuxer *deMuxer) {
 }
 
 void DeMuxer::decodingLoop() {
-    LOGCATE("DecoderBase::DecodingLoop start, m_MediaType");
+    LOGCATE("DeMuxer::DecodingLoop start, m_MediaType");
     {
         std::unique_lock<std::mutex> lock(m_Mutex);
         m_DecoderState = STATE_DECODING;
         lock.unlock();
     }
-    for (;;) {
+    while (m_DecoderState != STATE_STOP) {
+        LOGCATE("DeMuxer::DecodingLoop decodingLoop %d",m_DecoderState);
         while (m_DecoderState == STATE_PAUSE) {
             std::unique_lock<std::mutex> lock(m_Mutex);
-            LOGCATE("DecoderBase::DecodingLoop waiting, m_MediaType");
+            LOGCATE("DeMuxer::DecodingLoop waiting, m_MediaType");
             m_Cond.wait_for(lock, std::chrono::milliseconds(10));
         }
 
         if (m_DecoderState == STATE_STOP) {
+            LOGCATE("DeMuxer::DecodingLoop  stop break thread");
             break;
         }
 
         if (decodeOnePacket() != 0) {
-            LOGCATE("DecoderBase::Stop");
+            LOGCATE("DeMuxer::Stop  no frame");
             std::unique_lock<std::mutex> lock(m_Mutex);
             m_DecoderState = STATE_FINISH;
             m_Cond.notify_all();
             break;
         }
     }
-    LOGCATE("DecoderBase::DecodingLoop end");
+    LOGCATE("DeMuxer::DecodingLoop end");
 }
 
 int DeMuxer::decodeOnePacket() {
@@ -189,13 +189,13 @@ int DeMuxer::decodeOnePacket() {
                                           0);
         if (seek_ret < 0) {
             m_SeekSuccess = false;
-            LOGCATE("BaseDecoder::DecodeOneFrame error while seeking m_MediaType");
+            LOGCATE("DeMuxer::DecodeOneFrame error while seeking m_MediaType");
         } else {
             m_VideoDecoder->clearCache();
             m_AudioDecoder->clearCache();
             m_SeekSuccess = true;
             m_SeekPosition = -1;
-            LOGCATE("BaseDecoder::DecodeOneFrame seekFrame pos=%f", m_SeekPosition);
+            LOGCATE("DeMuxer::DecodeOneFrame seekFrame pos=%f", m_SeekPosition);
         }
     }
 

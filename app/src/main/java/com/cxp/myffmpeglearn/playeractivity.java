@@ -17,6 +17,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.util.Log;
+import android.view.View;
 import android.widget.SeekBar;
 import android.widget.Toast;
 
@@ -81,18 +82,32 @@ public class playeractivity extends AppCompatActivity implements FFPlayEngine.Ev
         mMediaPlayer.addEventCallback(this);
         mMediaPlayer.setUrl();
         mMediaPlayer.setVideoPlayerRender(render);
+        if (!hasPermissionsGranted(REQUEST_PERMISSIONS)) {
+            ActivityCompat.requestPermissions(this, REQUEST_PERMISSIONS, PERMISSION_REQUEST_CODE);
+        } else {
+
+        }
+
+
+        findViewById(R.id.btStart).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                mMediaPlayer.play(mVideoPath);
+            }
+        });
+
+        findViewById(R.id.btStop).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                mMediaPlayer.stop();
+            }
+        });
     }
 
     @Override
     protected void onResume() {
         Log.e(TAG, "onResume() called");
         super.onResume();
-        if (!hasPermissionsGranted(REQUEST_PERMISSIONS)) {
-            ActivityCompat.requestPermissions(this, REQUEST_PERMISSIONS, PERMISSION_REQUEST_CODE);
-        } else {
-            if (mMediaPlayer != null)
-                mMediaPlayer.play(mVideoPath);
-        }
     }
 
     @Override
@@ -112,14 +127,13 @@ public class playeractivity extends AppCompatActivity implements FFPlayEngine.Ev
     @Override
     protected void onPause() {
         super.onPause();
-        if (mMediaPlayer != null)
-            mMediaPlayer.pause();
+//        if (mMediaPlayer != null)
+//            mMediaPlayer.pause();
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        mMediaPlayer.stop();
         mMediaPlayer.destroy();
     }
 

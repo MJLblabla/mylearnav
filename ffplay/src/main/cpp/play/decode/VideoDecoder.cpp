@@ -1,16 +1,15 @@
 //
-// Created by manjialle on 2022/1/21.
+// Created by manjialle on 2022/1/24.
 //
+#include "VideoDecoder.h"
 
-#include "VideoSoftDecoder.h"
 
-
-void VideoSoftDecoder::init() {
+void VideoDecoder::init() {
     m_PacketQueue = new AVPacketQueue();
     m_PacketQueue->Start();
 }
 
-void VideoSoftDecoder::unInit() {
+void VideoDecoder::unInit() {
     m_VideoRender->UnInit();
     m_VideoRender = nullptr;
 
@@ -20,9 +19,9 @@ void VideoSoftDecoder::unInit() {
     }
 }
 
-int VideoSoftDecoder::start(AVFormatContext *m_AVFormatContext) {
-   // m_StartTimeStamp =-1;
-    std::unique_lock<std::mutex> lock(m_Mutex);
+int VideoDecoder::start(AVFormatContext *m_AVFormatContext) {
+    // m_StartTimeStamp =-1;
+    std::unique_lock <std::mutex> lock(m_Mutex);
     m_DecoderState = STATE_DECODING;
     m_Cond.notify_all();
 
@@ -33,17 +32,17 @@ int VideoSoftDecoder::start(AVFormatContext *m_AVFormatContext) {
         AVCodecParameters *codecParameters = m_AVFormatContext->streams[m_StreamIdx]->codecpar;
 
         //6.获取解码器
-      //  m_AVCodec = avcodec_find_decoder(codecParameters->codec_id);
-        m_AVCodec =  avcodec_find_decoder_by_name("h264_mediacodec");
-      if (m_AVCodec == nullptr) {
-            LOGCATE("DecoderBase::InitFFDecoder avcodec_find_decoder fail.");
+        //  m_AVCodec = avcodec_find_decoder(codecParameters->codec_id);
+        m_AVCodec = avcodec_find_decoder_by_name("h264_mediacodec");
+        if (m_AVCodec == nullptr) {
+            LOGCATE("VideoDecoder::InitFFDecoder avcodec_find_decoder fail.");
             break;
         }
 
         //7.创建解码器上下文
         m_AVCodecContext = avcodec_alloc_context3(m_AVCodec);
         if (avcodec_parameters_to_context(m_AVCodecContext, codecParameters) != 0) {
-            LOGCATE("DecoderBase::InitFFDecoder avcodec_parameters_to_context fail.");
+            LOGCATE("VideoDecoder::InitFFDecoder avcodec_parameters_to_context fail.");
             break;
         }
 
@@ -56,7 +55,7 @@ int VideoSoftDecoder::start(AVFormatContext *m_AVFormatContext) {
         //8.打开解码器
         result = avcodec_open2(m_AVCodecContext, m_AVCodec, &pAVDictionary);
         if (result < 0) {
-            LOGCATE("DecoderBase::InitFFDecoder avcodec_open2 fail. result=%d", result);
+            LOGCATE("VideoDecoder::InitFFDecoder avcodec_open2 fail. result=%d", result);
             break;
         }
         result = 0;
@@ -70,7 +69,7 @@ int VideoSoftDecoder::start(AVFormatContext *m_AVFormatContext) {
     return result;
 }
 
-void VideoSoftDecoder::onDecoderReady() {
+void VideoDecoder::onDecoderReady() {
     LOGCATE("VideoDecoder::OnDecoderReady");
     m_VideoWidth = m_AVCodecContext->width;
     m_VideoHeight = m_AVCodecContext->height;
@@ -100,33 +99,34 @@ void VideoSoftDecoder::onDecoderReady() {
 
 }
 
-void VideoSoftDecoder::pause() {
-    std::unique_lock<std::mutex> lock(m_Mutex);
+void VideoDecoder::pause() {
+    std::unique_lock <std::mutex> lock(m_Mutex);
     m_DecoderState = STATE_PAUSE;
 }
 
-void VideoSoftDecoder::resume() {
-    std::unique_lock<std::mutex> lock(m_Mutex);
+void VideoDecoder::resume() {
+    std::unique_lock <std::mutex> lock(m_Mutex);
     m_DecoderState = STATE_DECODING;
     m_Cond.notify_all();
 }
 
-void VideoSoftDecoder::stop() {
+void VideoDecoder::stop() {
 
-    LOGCATE("DecoderBase::Stop");
-    std::unique_lock<std::mutex> lock(m_Mutex);
+    LOGCATE("VideoDecoder::Stop");
+    std::unique_lock <std::mutex> lock(m_Mutex);
     m_DecoderState = STATE_STOP;
     m_Cond.notify_all();
 
-    if (m_PacketQueue) {
-        m_PacketQueue->Flush();
-    }
     if (m_DecodeThread) {
         m_DecodeThread->join();
         delete m_DecodeThread;
         m_DecodeThread = nullptr;
     }
+    LOGCATE("VideoDecoder::Stop finish");
 
+    if (m_PacketQueue) {
+        m_PacketQueue->Flush();
+    }
     if (m_Frame != nullptr) {
         av_frame_free(&m_Frame);
         m_Frame = nullptr;
@@ -155,24 +155,26 @@ void VideoSoftDecoder::stop() {
 }
 
 
-void VideoSoftDecoder::decodeThreadProc(VideoSoftDecoder *VideoSoftDecoder) {
-    VideoSoftDecoder->dealPackQueue();
+void VideoDecoder::decodeThreadProc(VideoDecoder *decoder) {
+    decoder->dealPackQueue();
 }
 
-void VideoSoftDecoder::dealPackQueue() {
+void VideoDecoder::dealPackQueue() {
 
     AVPacket *m_Packet = av_packet_alloc();
-    for (;;) {
+    while (m_DecoderState != STATE_STOP) {
+        LOGCATE("VideoDecoder::dealPackQueue");
         while (m_DecoderState == STATE_PAUSE) {
-            std::unique_lock<std::mutex> lock(m_Mutex);
-            LOGCATE("DecoderBase::DecodingLoop waiting, m_MediaType=%d");
+            std::unique_lock <std::mutex> lock(m_Mutex);
+            LOGCATE("VideoDecoder::DecodingLoop waiting, m_MediaType=%d");
             m_Cond.wait_for(lock, std::chrono::milliseconds(10));
-           // m_StartTimeStamp = GetSysCurrentTime() - m_CurTimeStamp;
+            // m_StartTimeStamp = GetSysCurrentTime() - m_CurTimeStamp;
         }
 //        if(m_StartTimeStamp == -1)
 //            m_StartTimeStamp = GetSysCurrentTime();
 
         if (m_DecoderState == STATE_STOP) {
+            LOGCATE("VideoDecoder::DecodingLoop stop break thread");
             goto __EXIT;
         }
 
@@ -194,7 +196,7 @@ void VideoSoftDecoder::dealPackQueue() {
             UpdateTimeStamp();
             AVSync();
             //渲染
-            LOGCATE("DecoderBase::DecodeOnePacket 000 m_MediaType=%d");
+            LOGCATE("VideoDecoder::DecodeOnePacket 000 m_MediaType=%d");
 
             LOGCATE("VideoDecoder::OnFrameAvailable frame=%p", m_Frame);
             if (m_VideoRender != nullptr && m_Frame != nullptr) {
@@ -266,7 +268,7 @@ void VideoSoftDecoder::dealPackQueue() {
             if (m_MsgContext && m_MsgCallback)
                 m_MsgCallback(m_MsgContext, MSG_REQUEST_RENDER, 0);
 
-            LOGCATE("DecoderBase::DecodeOnePacket 0001 m_MediaType=%d");
+            LOGCATE("VideoDecoder::DecodeOnePacket 0001 m_MediaType=%d");
             frameCount++;
             LOGCATE("BaseDecoder::DecodeOneFrame frameCount=%d", frameCount);
         }
@@ -279,11 +281,9 @@ void VideoSoftDecoder::dealPackQueue() {
     m_Packet = nullptr;
 }
 
-void VideoSoftDecoder::UpdateTimeStamp() {
-    LOGCATE("DecoderBase::UpdateTimeStamp");
-    std::unique_lock<std::mutex> lock(m_Mutex);
-
-
+void VideoDecoder::UpdateTimeStamp() {
+    LOGCATE("VideoDecoder::UpdateTimeStamp");
+   // std::unique_lock <std::mutex> lock(m_Mutex);
     if (m_Frame->pkt_dts != AV_NOPTS_VALUE) {
         m_CurTimeStamp = m_Frame->pkt_dts;
     } else if (m_Frame->pts != AV_NOPTS_VALUE) {
@@ -292,8 +292,8 @@ void VideoSoftDecoder::UpdateTimeStamp() {
         m_CurTimeStamp = 0;
     }
 
-    m_CurTimeStamp = (int64_t) (m_CurTimeStamp * timeBase * 1000);
-   // m_StartTimeStamp = GetSysCurrentTime() - m_CurTimeStamp;
+    m_CurTimeStamp = (int64_t)(m_CurTimeStamp * timeBase * 1000);
+    // m_StartTimeStamp = GetSysCurrentTime() - m_CurTimeStamp;
 //    if(m_SeekPosition > 0 && m_SeekSuccess)
 //    {
 //        m_StartTimeStamp = GetSysCurrentTime() - m_CurTimeStamp;
@@ -302,15 +302,16 @@ void VideoSoftDecoder::UpdateTimeStamp() {
 //    }
 }
 
-void VideoSoftDecoder::AVSync() {
-    LOGCATE("DecoderBase::AVSync");
+void VideoDecoder::AVSync() {
+    LOGCATE("VideoDecoder::AVSync");
 
-    if(m_AVSyncCallback != nullptr) {
+    if (m_AVSyncCallback != nullptr) {
         //视频向音频同步,传进来的 m_AVSyncCallback 用于获取音频时间戳
         long elapsedTime = m_AVSyncCallback(m_AVDecoderContext);
-        LOGCATE("DecoderBase::AVSync m_CurTimeStamp=%ld, elapsedTime=%ld", m_CurTimeStamp, elapsedTime);
+        LOGCATE("VideoDecoder::AVSync m_CurTimeStamp=%ld, elapsedTime=%ld", m_CurTimeStamp,
+                elapsedTime);
 
-        if(m_CurTimeStamp > elapsedTime) {
+        if (m_CurTimeStamp > elapsedTime) {
             //休眠时间
             auto sleepTime = static_cast<unsigned int>(m_CurTimeStamp - elapsedTime);//ms
             av_usleep(sleepTime * 1000);
@@ -336,12 +337,10 @@ void VideoSoftDecoder::AVSync() {
 //    delay = elapsedTime - m_CurTimeStamp;
 }
 
-void VideoSoftDecoder::clearCache() {
-    std::unique_lock<std::mutex> vBufLock(m_Mutex);
+void VideoDecoder::clearCache() {
+    std::unique_lock <std::mutex> vBufLock(m_Mutex);
     m_PacketQueue->Flush();
     avcodec_flush_buffers(m_AVCodecContext);
     vBufLock.unlock();
 }
-
-
 

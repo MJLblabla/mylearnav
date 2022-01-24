@@ -36,14 +36,14 @@ int AudioDecoder::start(AVFormatContext *m_AVFormatContext) {
         //6.获取解码器
         m_AVCodec = avcodec_find_decoder(codecParameters->codec_id);
         if (m_AVCodec == nullptr) {
-            LOGCATE("DecoderBase::InitFFDecoder avcodec_find_decoder fail.");
+            LOGCATE("AudioDecoder::InitFFDecoder avcodec_find_decoder fail.");
             break;
         }
 
         //7.创建解码器上下文
         m_AVCodecContext = avcodec_alloc_context3(m_AVCodec);
         if (avcodec_parameters_to_context(m_AVCodecContext, codecParameters) != 0) {
-            LOGCATE("DecoderBase::InitFFDecoder avcodec_parameters_to_context fail.");
+            LOGCATE("AudioDecoder::InitFFDecoder avcodec_parameters_to_context fail.");
             break;
         }
 
@@ -56,7 +56,7 @@ int AudioDecoder::start(AVFormatContext *m_AVFormatContext) {
         //8.打开解码器
         result = avcodec_open2(m_AVCodecContext, m_AVCodec, &pAVDictionary);
         if (result < 0) {
-            LOGCATE("DecoderBase::InitFFDecoder avcodec_open2 fail. result=%d", result);
+            LOGCATE("AudioDecoder::InitFFDecoder avcodec_open2 fail. result=%d", result);
             break;
         }
         result = 0;
@@ -114,20 +114,21 @@ void AudioDecoder::resume() {
 
 void AudioDecoder::stop() {
 
-    LOGCATE("DecoderBase::Stop");
+    LOGCATE("AudioDecoder::Stop");
     std::unique_lock<std::mutex> lock(m_Mutex);
     m_DecoderState = STATE_STOP;
     m_Cond.notify_all();
 
-    if (m_PacketQueue) {
-        m_PacketQueue->Flush();
-    }
     if (m_DecodeThread) {
         m_DecodeThread->join();
         delete m_DecodeThread;
         m_DecodeThread = nullptr;
     }
 
+    if (m_PacketQueue) {
+        m_PacketQueue->Flush();
+    }
+    LOGCATE("AudioDecoder::Stop finish");
     if (m_Frame != nullptr) {
         av_frame_free(&m_Frame);
         m_Frame = nullptr;
@@ -159,14 +160,16 @@ void AudioDecoder::decodeThreadProc(AudioDecoder *audioDecoder) {
 void AudioDecoder::dealPackQueue() {
 
     AVPacket *m_Packet = av_packet_alloc();
-    for (;;) {
+    while (m_DecoderState != STATE_STOP) {
+      //  LOGCATE("AudioDecoder::DecodingLoop dealPackQueue %d",m_DecoderState);
         while (m_DecoderState == STATE_PAUSE) {
             std::unique_lock<std::mutex> lock(m_Mutex);
-            LOGCATE("DecoderBase::DecodingLoop waiting, m_MediaType=%d");
+         //   LOGCATE("AudioDecoder::DecodingLoop waiting, m_MediaType=%d");
             m_Cond.wait_for(lock, std::chrono::milliseconds(10));
         }
 
         if (m_DecoderState == STATE_STOP) {
+           // LOGCATE("AudioDecoder::DecodingLoop stop break thread ");
             goto __EXIT;
         }
 
@@ -187,7 +190,7 @@ void AudioDecoder::dealPackQueue() {
             UpdateTimeStamp();
             AVSync();
             //渲染
-            LOGCATE("DecoderBase::DecodeOnePacket 000 m_MediaType");
+        //    LOGCATE("AudioDecoder::DecodeOnePacket 000 m_MediaType");
             if (m_AudioRender) {
                 int result = swr_convert(m_SwrContext, &m_AudioOutBuffer,
                                          m_DstFrameDataSze / 2,
@@ -198,10 +201,10 @@ void AudioDecoder::dealPackQueue() {
                 }
             }
 
-            LOGCATE("DecoderBase::DecodeOnePacket 0001 m_MediaType");
+           // LOGCATE("AudioDecoder::DecodeOnePacket 0001 m_MediaType");
             frameCount++;
         }
-        LOGCATE("BaseDecoder::DecodeOneFrame frameCount=%d", frameCount);
+       // LOGCATE("AudioDecoder::DecodeOneFrame frameCount=%d", frameCount);
         av_packet_unref(m_Packet);
     }
 
@@ -212,7 +215,7 @@ void AudioDecoder::dealPackQueue() {
 }
 
 void AudioDecoder::AVSync() {
-    LOGCATE("DecoderBase::AVSync");
+   // LOGCATE("AudioDecoder::AVSync");
 //    long curSysTime = GetSysCurrentTime();
 //    //基于系统时钟计算从开始播放流逝的时间
 //    long elapsedTime = curSysTime - m_StartTimeStamp;
@@ -222,7 +225,7 @@ void AudioDecoder::AVSync() {
     if(m_AVSyncCallback != nullptr) {
         //视频向音频同步,传进来的 m_AVSyncCallback 用于获取音频时间戳
         long elapsedTime = m_AVSyncCallback(m_AVDecoderContext);
-        LOGCATE("DecoderBase::AVSync m_CurTimeStamp=%ld, elapsedTime=%ld", m_CurTimeStamp, elapsedTime);
+     //   LOGCATE("AudioDecoder::AVSync m_CurTimeStamp=%ld, elapsedTime=%ld", m_CurTimeStamp, elapsedTime);
 
         if(m_CurTimeStamp > elapsedTime) {
             //休眠时间
@@ -244,8 +247,8 @@ void AudioDecoder::AVSync() {
 
 }
 void AudioDecoder::UpdateTimeStamp() {
-    LOGCATE("DecoderBase::UpdateTimeStamp");
-    std::unique_lock<std::mutex> lock(m_Mutex);
+  //  LOGCATE("AudioDecoder::UpdateTimeStamp");
+   // std::unique_lock<std::mutex> lock(m_Mutex);
     if (m_Frame->pkt_dts != AV_NOPTS_VALUE) {
         m_CurTimeStamp = m_Frame->pkt_dts;
     } else if (m_Frame->pts != AV_NOPTS_VALUE) {
