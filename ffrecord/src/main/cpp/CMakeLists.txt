@@ -64,6 +64,7 @@ set(third-party-libs
 
 set(native-libs
         android
+        lmediandk
         EGL
         GLESv3
         OpenSLES

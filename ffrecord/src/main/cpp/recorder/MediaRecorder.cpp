@@ -629,4 +629,5 @@ void MediaRecorder::StartMediaEncodeThread(MediaRecorder *recorder) {
         }
     }
     LOGCATE("MediaRecorder::StartVideoEncodeThread end");
+
 }
