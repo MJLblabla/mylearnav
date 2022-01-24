@@ -31,7 +31,6 @@ import javax.microedition.khronos.opengles.GL10;
 public class playeractivity extends AppCompatActivity implements FFPlayEngine.EventCallback {
 
 
-
     private static final String TAG = "MediaPlayerActivity";
     private static final String[] REQUEST_PERMISSIONS = {
             Manifest.permission.WRITE_EXTERNAL_STORAGE,
@@ -42,13 +41,14 @@ public class playeractivity extends AppCompatActivity implements FFPlayEngine.Ev
     private SeekBar mSeekBar = null;
     private boolean mIsTouch = false;
     private String mVideoPath = Environment.getExternalStorageDirectory().getAbsolutePath() + "/byteflow/one_piece.mp4";
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_playeractivity);
         mGLSurfaceView = findViewById(R.id.myglv);
         mGLSurfaceView.setEGLContextClientVersion(3);
-        MyGLRender render =new MyGLRender();
+        MyGLRender render = new MyGLRender();
         mGLSurfaceView.setRenderer(render);
         mGLSurfaceView.addOnGestureCallback(render);
 
@@ -69,7 +69,7 @@ public class playeractivity extends AppCompatActivity implements FFPlayEngine.Ev
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
                 Log.d(TAG, "onStopTrackingTouch() called with: progress = [" + seekBar.getProgress() + "]");
-                if(mMediaPlayer != null) {
+                if (mMediaPlayer != null) {
                     mMediaPlayer.seekToPosition(mSeekBar.getProgress());
                     mIsTouch = false;
                 }
@@ -90,10 +90,9 @@ public class playeractivity extends AppCompatActivity implements FFPlayEngine.Ev
         if (!hasPermissionsGranted(REQUEST_PERMISSIONS)) {
             ActivityCompat.requestPermissions(this, REQUEST_PERMISSIONS, PERMISSION_REQUEST_CODE);
         } else {
-            if(mMediaPlayer != null)
+            if (mMediaPlayer != null)
                 mMediaPlayer.play(mVideoPath);
         }
-
     }
 
     @Override
@@ -113,15 +112,15 @@ public class playeractivity extends AppCompatActivity implements FFPlayEngine.Ev
     @Override
     protected void onPause() {
         super.onPause();
-        if(mMediaPlayer != null)
+        if (mMediaPlayer != null)
             mMediaPlayer.pause();
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if(mMediaPlayer != null)
-            mMediaPlayer.destroy();
+        mMediaPlayer.stop();
+        mMediaPlayer.destroy();
     }
 
     @Override
@@ -142,7 +141,7 @@ public class playeractivity extends AppCompatActivity implements FFPlayEngine.Ev
                         mGLSurfaceView.requestRender();
                         break;
                     case MSG_DECODING_TIME:
-                        if(!mIsTouch)
+                        if (!mIsTouch)
                             mSeekBar.setProgress((int) msgValue);
                         break;
                     default:

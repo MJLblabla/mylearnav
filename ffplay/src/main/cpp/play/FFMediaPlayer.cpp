@@ -5,6 +5,7 @@
 void FFMediaPlayer::Init(JNIEnv *jniEnv, jobject obj) {
     jniEnv->GetJavaVM(&m_JavaVM);
     m_JavaObj = jniEnv->NewGlobalRef(obj);
+    av_jni_set_java_vm(m_JavaVM, NULL);
     muxer = new DeMuxer();
     muxer->init(SOFT);
     muxer->setMessageCallback(this, PostMessage);

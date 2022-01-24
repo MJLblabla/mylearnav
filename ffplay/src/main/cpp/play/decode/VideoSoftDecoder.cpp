@@ -33,8 +33,9 @@ int VideoSoftDecoder::start(AVFormatContext *m_AVFormatContext) {
         AVCodecParameters *codecParameters = m_AVFormatContext->streams[m_StreamIdx]->codecpar;
 
         //6.获取解码器
-        m_AVCodec = avcodec_find_decoder(codecParameters->codec_id);
-        if (m_AVCodec == nullptr) {
+      //  m_AVCodec = avcodec_find_decoder(codecParameters->codec_id);
+        m_AVCodec =  avcodec_find_decoder_by_name("h264_mediacodec");
+      if (m_AVCodec == nullptr) {
             LOGCATE("DecoderBase::InitFFDecoder avcodec_find_decoder fail.");
             break;
         }
