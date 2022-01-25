@@ -154,6 +154,9 @@ AVRational SoftAudioEncoder::getTimeBase() {
 
 int SoftAudioEncoder::dealOneFrame() {
     LOGCATE("MediaRecorder::EncodeAudioFrame");
+    if(m_Exit){
+        return -1;
+    }
     int result = 0;
     AVCodecContext *c;
     AVPacket pkt = {0}; // data and size must be 0;

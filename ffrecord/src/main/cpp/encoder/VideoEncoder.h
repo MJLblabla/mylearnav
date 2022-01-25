@@ -20,6 +20,9 @@ public:
     void pushImg(VideoFrame *img){
         mVideoFrameQueue.Push(img);
     }
+    int getQueueSize(){
+        return mVideoFrameQueue.Size();
+    }
 
 };
 #endif //MYFFMPEGLEARN_VIDEOENCODER_H

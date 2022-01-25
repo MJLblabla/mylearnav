@@ -19,6 +19,9 @@ public:
         m_AudioFrameQueue.Push(audioFrame);
     }
 
+    int getQueueSize(){
+        return m_AudioFrameQueue.Size();
+    }
 };
 
 

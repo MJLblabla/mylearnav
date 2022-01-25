@@ -9,18 +9,20 @@ void EnMuxer::init(EecoderType decoderType) {
 }
 
 int EnMuxer::onFrame2Encode(AudioFrame *inputFrame) {
-    if (m_EncoderState != STATE_DECODING) {
+    if (m_EncoderState != STATE_DECODING || mAudioEncoder->getQueueSize()>5) {
         delete inputFrame;
         inputFrame = nullptr;
         return 0;
     }
+
     mAudioEncoder->pushImg(inputFrame);
     return 1;
 }
 
 int EnMuxer::onFrame2Encode(VideoFrame *inputFrame) {
-    if (m_EncoderState != STATE_DECODING) {
+    if (m_EncoderState != STATE_DECODING || mVideoEncoder->getQueueSize()>5) {
         NativeImageUtil::FreeNativeImage(inputFrame);
+        delete inputFrame;
         inputFrame = nullptr;
         return 0;
     }
@@ -112,6 +114,12 @@ void EnMuxer::stop() {
     m_Exit = true;
     m_EncoderState = STATE_STOP;
     m_Cond.notify_all();
+
+    mVideoEncoder->stop();
+    LOGCATE("MediaRecorder::StopRecord   mVideoEncoder->stop() f");
+    mAudioEncoder->stop();
+    LOGCATE("MediaRecorder::StopRecord   mAudioEncoder->stop() f");
+
     LOGCATE("MediaRecorder::StopRecord  encoderThread->join() b");
     if (encoderThread != nullptr) {
         encoderThread->join();
@@ -119,10 +127,6 @@ void EnMuxer::stop() {
         encoderThread = nullptr;
     }
     LOGCATE("MediaRecorder::StopRecord  encoderThread->join() f");
-    mVideoEncoder->stop();
-    LOGCATE("MediaRecorder::StopRecord   mVideoEncoder->stop() f");
-    mAudioEncoder->stop();
-    LOGCATE("MediaRecorder::StopRecord   mAudioEncoder->stop() f");
 
     int ret = av_write_trailer(m_AVFormatContext);
     LOGCATE("MediaRecorder::StopRecord while av_write_trailer %s",

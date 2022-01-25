@@ -121,6 +121,9 @@ AVRational SoftVideoEncoder::getTimeBase() {
 
 int SoftVideoEncoder::dealOneFrame() {
     LOGCATE("MediaRecorder::EncodeVideoFrame");
+    if(m_Exit){
+        return -1;
+    }
     int result = 0;
     int ret;
     AVCodecContext *c;
