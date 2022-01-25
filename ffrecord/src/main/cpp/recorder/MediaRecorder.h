@@ -10,7 +10,7 @@
 #include "ThreadSafeQueue.h"
 #include "thread"
 #include "SingleAudioRecorder.h"
-
+#include "SingleVideoRecorder.h"
 extern "C" {
 #include <libavutil/avassert.h>
 #include <libavutil/channel_layout.h>
@@ -25,7 +25,6 @@ extern "C" {
 using namespace std;
 
 typedef NativeImage VideoFrame;
-
 
 class AVOutputStream {
 public:
@@ -134,10 +133,7 @@ private:
     int              m_EnableVideo = 0;
     int              m_EnableAudio = 0;
     volatile bool    m_Exit = false;
-    //音频编码线程
-    thread          *m_pAudioThread = nullptr;
-    //视频编码线程
-    thread          *m_pVideoThread = nullptr;
+
     thread          *m_pMediaThread = nullptr;
 };
 

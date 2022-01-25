@@ -19,8 +19,6 @@ extern "C" {
 #include "MessageCallback.h"
 
 
-
-
 class DeMuxer {
 
 private:

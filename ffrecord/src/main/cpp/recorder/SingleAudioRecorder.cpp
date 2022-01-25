@@ -59,7 +59,7 @@ int SingleAudioRecorder::StartRecord() {
         m_pCodecCtx->channels = av_get_channel_layout_nb_channels(m_pCodecCtx->channel_layout);
         m_pCodecCtx->bit_rate = 96000;
 //        if (avOutputFormat->flags & AVFMT_GLOBALHEADER) {
-//            m_pCodecCtx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+//            mCodecCtx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
 //        }
 
         result = avcodec_open2(m_pCodecCtx, m_pCodec, nullptr);

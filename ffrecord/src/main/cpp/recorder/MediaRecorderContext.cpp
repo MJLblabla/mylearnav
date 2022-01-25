@@ -11,10 +11,14 @@
 jfieldID MediaRecorderContext::s_ContextHandle = 0L;
 
 MediaRecorderContext::MediaRecorderContext() {
+    mEnMuxer = new EnMuxer();
+    mEnMuxer->init(SOFT);
 }
 
 MediaRecorderContext::~MediaRecorderContext() {
     LOGCATE("MediaRecorderContext::~MediaRecorderContext()");
+    mEnMuxer->unInit();
+    delete mEnMuxer;
 }
 
 void MediaRecorderContext::CreateContext(JNIEnv *env, jobject instance) {
@@ -63,7 +67,6 @@ MediaRecorderContext *MediaRecorderContext::GetContext(JNIEnv *env, jobject inst
         LOGCATE("MediaRecorderContext::GetContext Could not find play.render context.");
         return NULL;
     }
-
     MediaRecorderContext *pContext = reinterpret_cast<MediaRecorderContext *>(env->GetLongField(
             instance, s_ContextHandle));
     return pContext;
@@ -78,39 +81,30 @@ MediaRecorderContext::StartRecord(int recorderType, const char *outUrl, int fram
     LOGCATE("MediaRecorderContext::StartRecord recorderType=%d, outUrl=%s, [w,h]=[%d,%d], videoBitRate=%ld, fps=%d",
             recorderType, outUrl, frameWidth, frameHeight, videoBitRate, fps);
     std::unique_lock<std::mutex> lock(m_mutex);
-    switch (recorderType) {
-        case RECORDER_TYPE_SINGLE_VIDEO:
-            if (m_pVideoRecorder == nullptr) {
-                m_pVideoRecorder = new SingleVideoRecorder(outUrl, frameHeight, frameWidth,
-                                                           videoBitRate, fps);
-                m_pVideoRecorder->StartRecord();
-            }
-            break;
-        case RECORDER_TYPE_SINGLE_AUDIO:
-            if (m_pAudioRecorder == nullptr) {
-                m_pAudioRecorder = new SingleAudioRecorder(outUrl, DEFAULT_SAMPLE_RATE,
-                                                           AV_CH_LAYOUT_STEREO, AV_SAMPLE_FMT_S16);
-                m_pAudioRecorder->StartRecord();
-            }
-            break;
-        case RECORDER_TYPE_AV:
-            if (m_pAVRecorder == nullptr) {
-                RecorderParam param = {0};
-                param.frameWidth = frameWidth;
-                param.frameHeight = frameHeight;
-                param.videoBitRate = videoBitRate;
-                param.fps = fps;
-                param.audioSampleRate = DEFAULT_SAMPLE_RATE;
-                param.channelLayout = AV_CH_LAYOUT_STEREO;
-                param.sampleFormat = AV_SAMPLE_FMT_S16;
-                m_pAVRecorder = new MediaRecorder(outUrl, &param);
-                m_pAVRecorder->StartRecord();
-            }
-            break;
-        default:
-            break;
-    }
+//    switch (recorderType) {
+//        case RECORDER_TYPE_SINGLE_VIDEO:
+//            break;
+//        case RECORDER_TYPE_SINGLE_AUDIO:
+//            break;
+//        case RECORDER_TYPE_AV:
+//
+//
+//            m_pAVRecorder = new MediaRecorder(outUrl, &param);
+//            m_pAVRecorder->StartRecord();
+//            break;
+//        default:
+//            break;
 
+    //   }
+    RecorderParam param = {0};
+    param.frameWidth = frameWidth;
+    param.frameHeight = frameHeight;
+    param.videoBitRate = videoBitRate;
+    param.fps = fps;
+    param.audioSampleRate = DEFAULT_SAMPLE_RATE;
+    param.channelLayout = AV_CH_LAYOUT_STEREO;
+    param.sampleFormat = AV_SAMPLE_FMT_S16;
+    mEnMuxer->start(outUrl, &param);
 
     return 0;
 }
@@ -119,23 +113,7 @@ int MediaRecorderContext::StopRecord() {
     isStart = false;
     LOGCATE("MediaRecorderContext::StopRecord");
     std::unique_lock<std::mutex> lock(m_mutex);
-    if (m_pVideoRecorder != nullptr) {
-        m_pVideoRecorder->StopRecord();
-        delete m_pVideoRecorder;
-        m_pVideoRecorder = nullptr;
-    }
-
-    if (m_pAudioRecorder != nullptr) {
-        m_pAudioRecorder->StopRecord();
-        delete m_pAudioRecorder;
-        m_pAudioRecorder = nullptr;
-    }
-
-    if (m_pAVRecorder != nullptr) {
-        m_pAVRecorder->StopRecord();
-        delete m_pAVRecorder;
-        m_pAVRecorder = nullptr;
-    }
+    mEnMuxer->stop();
     return 0;
 }
 
@@ -144,18 +122,10 @@ void MediaRecorderContext::OnAudioData(uint8_t *pData, int size) {
 
     if (!isStart)
         return;
-    if (m_pAudioRecorder != nullptr && m_pAudioRecorder->getWorkAbleAudioQueueSize() > 5)
-        return;
 
-    if (m_pAVRecorder != nullptr && m_pAVRecorder->getWorkAbleAudioQueueSize() > 5)
-        return;
 
-    AudioFrame *audioFrame  = new AudioFrame(pData, size, true);
-    if (m_pAudioRecorder != nullptr)
-        m_pAudioRecorder->OnFrame2Encode(audioFrame);
-
-    if (m_pAVRecorder != nullptr)
-        m_pAVRecorder->OnFrame2Encode(audioFrame);
+    AudioFrame *audioFrame = new AudioFrame(pData, size, true);
+    mEnMuxer->onFrame2Encode(audioFrame);
 }
 
 void
@@ -166,18 +136,6 @@ MediaRecorderContext::OnVideoFrame(void *ctx, int format, uint8_t *pBuffer, int 
 
     if (!isStart)
         return;
-
-    if (m_pVideoRecorder != nullptr) {
-        if (m_pVideoRecorder->getWorkAbleVideoQueueSize() > 5) {
-            return;
-        }
-    }
-
-    if (m_pAVRecorder != nullptr) {
-        if (m_pAVRecorder->getWorkAbleVideoQueueSize() > 5) {
-            return;
-        }
-    }
 
     NativeImage *nativeImage = new NativeImage();
 
@@ -235,12 +193,8 @@ MediaRecorderContext::OnVideoFrame(void *ctx, int format, uint8_t *pBuffer, int 
     LOGCATE("MediaRecorderContext::UpdateFrame2 format=%d, width=%d, height=%d, pData=%p",
             format, widthsrc, heightsrc, pBuffer);
 
-    if (m_pVideoRecorder != nullptr)
-        m_pVideoRecorder->OnFrame2Encode(nativeImage);
-
-    if (m_pAVRecorder != nullptr)
-        m_pAVRecorder->OnFrame2Encode(nativeImage);
-   // free(src_yuv);
+    mEnMuxer->onFrame2Encode(nativeImage);
+    // free(src_yuv);
     src_yuv = nullptr;
 
 }

@@ -161,7 +161,7 @@ void AudioDecoder::dealPackQueue() {
 
     AVPacket *m_Packet = av_packet_alloc();
     while (m_DecoderState != STATE_STOP) {
-      //  LOGCATE("AudioDecoder::DecodingLoop dealPackQueue %d",m_DecoderState);
+      //  LOGCATE("AudioDecoder::DecodingLoop dealPackQueue %d",m_EncoderState);
         while (m_DecoderState == STATE_PAUSE) {
             std::unique_lock<std::mutex> lock(m_Mutex);
          //   LOGCATE("AudioDecoder::DecodingLoop waiting, m_MediaType=%d");

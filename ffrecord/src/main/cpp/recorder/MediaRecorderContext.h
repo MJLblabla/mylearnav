@@ -8,10 +8,8 @@
 
 #include <cstdint>
 #include <jni.h>
-#include <SingleVideoRecorder.h>
-#include "SingleAudioRecorder.h"
-#include "MediaRecorder.h"
 
+#include "../encoder/EnMuxer.h"
 #define RECORDER_TYPE_SINGLE_VIDEO  0 //仅录制视频
 #define RECORDER_TYPE_SINGLE_AUDIO  1 //仅录制音频
 #define RECORDER_TYPE_AV            2 //同时录制音频和视频,打包成 MP4 文件
@@ -43,10 +41,7 @@ private:
     static jfieldID s_ContextHandle;
 
     static void StoreContext(JNIEnv *env, jobject instance, MediaRecorderContext *pContext);
-
-    SingleVideoRecorder *m_pVideoRecorder = nullptr;
-    SingleAudioRecorder *m_pAudioRecorder = nullptr;
-    MediaRecorder *m_pAVRecorder = nullptr;
+    EnMuxer *mEnMuxer= nullptr;
     mutex m_mutex;
 
 };

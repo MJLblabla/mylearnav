@@ -111,19 +111,7 @@ int MediaRecorder::OnFrame2Encode(VideoFrame *inputFrame) {
 int MediaRecorder::StopRecord() {
     LOGCATE("MediaRecorder::StopRecord");
     m_Exit = true;
-    if (m_pAudioThread != nullptr || m_pVideoThread != nullptr || m_pMediaThread != nullptr) {
-
-        if (m_pAudioThread != nullptr) {
-            m_pAudioThread->join();
-            delete m_pAudioThread;
-            m_pAudioThread = nullptr;
-        }
-
-        if (m_pVideoThread != nullptr) {
-            m_pVideoThread->join();
-            delete m_pVideoThread;
-            m_pVideoThread = nullptr;
-        }
+    if (m_pMediaThread != nullptr) {
 
         if (m_pMediaThread != nullptr) {
             m_pMediaThread->join();

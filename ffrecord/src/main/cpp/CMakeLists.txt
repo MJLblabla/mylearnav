@@ -20,6 +20,7 @@ set(libname learn-ffmpeg)
 include_directories(
         include
         recorder
+        encoder
         common
         util
      )
@@ -37,6 +38,7 @@ link_directories(
 file(GLOB src-files
         ${CMAKE_SOURCE_DIR}/*.cpp
         ${CMAKE_SOURCE_DIR}/recorder/*.cpp
+        ${CMAKE_SOURCE_DIR}/encoder/*.cpp
         )
 
 add_library( # Sets the name of the library.
@@ -64,7 +66,7 @@ set(third-party-libs
 
 set(native-libs
         android
-        lmediandk
+        mediandk
         EGL
         GLESv3
         OpenSLES
