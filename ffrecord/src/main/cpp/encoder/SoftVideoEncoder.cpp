@@ -76,6 +76,8 @@ int SoftVideoEncoder::start(AVFormatContext *formatCtx, RecorderParam *param) {
         LOGCATE("MediaRecorder::OpenVideo Could not copy the stream parameters");
         return -1;
     }
+    m_Exit = false;
+    m_EncodeEnd = 0;
     return 1;
 }
 
@@ -97,12 +99,14 @@ AVFrame *SoftVideoEncoder::AllocVideoFrame(AVPixelFormat pix_fmt, int width, int
         LOGCATE("MediaRecorder::AllocVideoFrame Could not allocate frame data.");
         return nullptr;
     }
-    m_Exit = false;
     return picture;
 }
 
 void SoftVideoEncoder::stop() {
     m_Exit = true;
+}
+
+void SoftVideoEncoder::clear() {
     avcodec_free_context(&mCodecCtx);
     av_frame_free(&mFrame);
 
@@ -113,6 +117,9 @@ void SoftVideoEncoder::stop() {
     }
     //delete mVideoCodec;
     mVideoCodec = nullptr;
+    if(m_Packet){
+        av_packet_free(&m_Packet);
+    }
 }
 
 AVRational SoftVideoEncoder::getTimeBase() {
@@ -188,6 +195,9 @@ int SoftVideoEncoder::dealOneFrame() {
         }
         LOGCATE("MediaRecorder::EncodeVideoFrame video pkt pts=%ld, size=%d", m_Packet->pts,
                 m_Packet->size);
+        if(m_AVFormatContext== nullptr){
+            goto EXIT;
+        }
         int result = WritePacket(m_AVFormatContext, &c->time_base, mAvStream, m_Packet);
         if (result < 0) {
             LOGCATE("MediaRecorder::EncodeVideoFrame video Error while writing audio frame: %s",

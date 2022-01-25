@@ -13,8 +13,6 @@ class SoftAudioEncoder : public AudioEncoder {
     AVCodecContext *mCodecCtx = nullptr;
     AVCodec *mAdioCodec = nullptr;
 
-    volatile bool m_Exit = false;
-
     int m_SamplesCount;
     AVFrame *m_pFrame;
     AVFrame *m_pTmpFrame;
@@ -33,6 +31,7 @@ public:
     int start(AVFormatContext *formatCtx, RecorderParam *param);
 
     void stop();
+    void clear();
 
     int dealOneFrame();
     AVRational getTimeBase();

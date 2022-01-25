@@ -11,6 +11,7 @@
 #include <condition_variable>
 
 template<typename T>
+
 class ThreadSafeQueue {
 
 public:

@@ -39,23 +39,18 @@ int SoftAudioEncoder::start(AVFormatContext *formatCtx, RecorderParam *param) {
     mCodecCtx->channel_layout = m_RecorderParam.channelLayout;
     mCodecCtx->channels = av_get_channel_layout_nb_channels(mCodecCtx->channel_layout);
     mAvStream->time_base = (AVRational) {1, mCodecCtx->sample_rate};
-
-
     /**
      * OPEN AUDIO
      */
     LOGCATE("MediaRecorder::OpenAudio");
-
     int nb_samples;
     int ret;
-
     /* open it */
     ret = avcodec_open2(mCodecCtx, mAdioCodec, nullptr);
     if (ret < 0) {
         LOGCATE("MediaRecorder::OpenAudio Could not open audio codec: %s", av_err2str(ret));
         return -1;
     }
-
     if (mCodecCtx->codec->capabilities & AV_CODEC_CAP_VARIABLE_FRAME_SIZE)
         nb_samples = 10000;
     else
@@ -87,7 +82,7 @@ int SoftAudioEncoder::start(AVFormatContext *formatCtx, RecorderParam *param) {
     av_opt_set_int(m_pSwrCtx, "out_sample_rate", mCodecCtx->sample_rate, 0);
     av_opt_set_sample_fmt(m_pSwrCtx, "out_sample_fmt", mCodecCtx->sample_fmt, 0);
 
-    if(m_pSwrCtx){
+    if (m_pSwrCtx) {
         LOGCATE("MediaRecorder::swr_init(m_pSwrCtx)");
         ret = swr_init(m_pSwrCtx);
         /* initialize the resampling context */
@@ -96,6 +91,8 @@ int SoftAudioEncoder::start(AVFormatContext *formatCtx, RecorderParam *param) {
             return -1;
         }
     }
+    m_Exit = false;
+    m_EncodeEnd = 0;
     return 1;
 }
 
@@ -129,6 +126,9 @@ AVFrame *SoftAudioEncoder::AllocAudioFrame(AVSampleFormat sample_fmt, uint64_t c
 
 void SoftAudioEncoder::stop() {
     m_Exit = true;
+}
+
+void SoftAudioEncoder::clear() {
     avcodec_free_context(&mCodecCtx);
     av_frame_free(&m_pFrame);
 
@@ -144,17 +144,18 @@ void SoftAudioEncoder::stop() {
         av_free(m_pTmpFrame);
         m_pTmpFrame = nullptr;
     }
-
-   // delete mAdioCodec;
+    // delete mAdioCodec;
     mAdioCodec = nullptr;
 }
+
+
 AVRational SoftAudioEncoder::getTimeBase() {
     return mCodecCtx->time_base;
 }
 
 int SoftAudioEncoder::dealOneFrame() {
     LOGCATE("MediaRecorder::EncodeAudioFrame");
-    if(m_Exit){
+    if (m_Exit) {
         return -1;
     }
     int result = 0;
@@ -163,10 +164,8 @@ int SoftAudioEncoder::dealOneFrame() {
     AVFrame *frame;
     int ret;
     int dst_nb_samples;
-
     av_init_packet(&pkt);
-
-
+    c = mCodecCtx;
     while (m_AudioFrameQueue.Empty() && !m_Exit) {
         usleep(10 * 1000);
     }
@@ -240,8 +239,12 @@ int SoftAudioEncoder::dealOneFrame() {
             result = 0;
             goto EXIT;
         }
+        if (m_AVFormatContext == nullptr) {
+            goto EXIT;
+        }
         LOGCATE("MediaRecorder::EncodeAudioFrame pkt pts=%ld, size=%d", pkt.pts, pkt.size);
         int result = WritePacket(m_AVFormatContext, &c->time_base, mAvStream, &pkt);
+        LOGCATE("MediaRecorder::EncodeAudioFrame finish");
         if (result < 0) {
             LOGCATE("MediaRecorder::EncodeAudioFrame audio Error while writing audio frame: %s",
                     av_err2str(ret));

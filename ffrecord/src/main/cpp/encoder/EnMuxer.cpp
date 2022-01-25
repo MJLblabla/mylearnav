@@ -4,12 +4,13 @@
 #include "EnMuxer.h"
 
 void EnMuxer::init(EecoderType decoderType) {
-    mVideoEncoder = new SoftVideoEncoder();
+    mVideoEncoder = new HWVideoEncoder();
+    //new SoftVideoEncoder();
     mAudioEncoder = new SoftAudioEncoder();
 }
 
 int EnMuxer::onFrame2Encode(AudioFrame *inputFrame) {
-    if (m_EncoderState != STATE_DECODING || mAudioEncoder->getQueueSize()>5) {
+    if (m_EncoderState != STATE_DECODING || mAudioEncoder->getQueueSize() > 5) {
         delete inputFrame;
         inputFrame = nullptr;
         return 0;
@@ -20,7 +21,7 @@ int EnMuxer::onFrame2Encode(AudioFrame *inputFrame) {
 }
 
 int EnMuxer::onFrame2Encode(VideoFrame *inputFrame) {
-    if (m_EncoderState != STATE_DECODING || mVideoEncoder->getQueueSize()>5) {
+    if (m_EncoderState != STATE_DECODING || mVideoEncoder->getQueueSize() > 5) {
         NativeImageUtil::FreeNativeImage(inputFrame);
         delete inputFrame;
         inputFrame = nullptr;
@@ -40,7 +41,7 @@ void EnMuxer::start(const char *url, RecorderParam *param) {
         LOGCATE("MediaRecorder:: avformat_alloc_output_context2G %s",
                 av_err2str(ret));
     }
-    if(!m_AVFormatContext){
+    if (!m_AVFormatContext) {
         return;
     }
 
@@ -77,7 +78,7 @@ void EnMuxer::startMediaEncodeThread(EnMuxer *recorder) {
 }
 
 void EnMuxer::loopEncoder() {
-    while (!mAudioEncoder->m_EncodeEnd || !mVideoEncoder->m_EncodeEnd) {
+    while (!m_Exit) {
 
         while (m_EncoderState == STATE_PAUSE) {
             std::unique_lock<std::mutex> lock(m_Mutex);
@@ -89,31 +90,31 @@ void EnMuxer::loopEncoder() {
             LOGCATE("DeMuxer::DecodingLoop  stop break thread");
             break;
         }
-
-        double videoTimestamp = mVideoEncoder->mNextPts * av_q2d(mVideoEncoder->getTimeBase());
-        double audioTimestamp = mAudioEncoder->mNextPts * av_q2d(mAudioEncoder->getTimeBase());
-
-        LOGCATE("MediaRecorder::StartVideoEncodeThread [videoTimestamp, audioTimestamp]=[%lf, %lf]",
-                videoTimestamp, audioTimestamp);
-        if (!mVideoEncoder->m_EncodeEnd &&
-            (mAudioEncoder->m_EncodeEnd ||
-             av_compare_ts(mVideoEncoder->mNextPts, mVideoEncoder->getTimeBase(),
-                           mAudioEncoder->mNextPts, mAudioEncoder->getTimeBase()) <= 0)) {
-            //视频和音频时间戳对齐，人对于声音比较敏感，防止出现视频声音播放结束画面还没结束的情况
-            if (audioTimestamp <= videoTimestamp && mAudioEncoder->m_EncodeEnd)
-                mVideoEncoder->m_EncodeEnd = 1;
-            mVideoEncoder->m_EncodeEnd = mVideoEncoder->dealOneFrame();
-        } else {
-            mAudioEncoder->m_EncodeEnd = mAudioEncoder->dealOneFrame();
-        }
+        mAudioEncoder->m_EncodeEnd = mAudioEncoder->dealOneFrame();
+//        double videoTimestamp = mVideoEncoder->mNextPts * av_q2d(mVideoEncoder->getTimeBase());
+//        double audioTimestamp = mAudioEncoder->mNextPts * av_q2d(mAudioEncoder->getTimeBase());
+//
+//        LOGCATE("MediaRecorder::loopEncoder [videoTimestamp, audioTimestamp]=[%lf, %lf]",
+//                videoTimestamp, audioTimestamp);
+//        if (!mVideoEncoder->m_EncodeEnd &&
+//            (mAudioEncoder->m_EncodeEnd ||
+//             av_compare_ts(mVideoEncoder->mNextPts, mVideoEncoder->getTimeBase(),
+//                           mAudioEncoder->mNextPts, mAudioEncoder->getTimeBase()) <= 0)) {
+//            //视频和音频时间戳对齐，人对于声音比较敏感，防止出现视频声音播放结束画面还没结束的情况
+//            if (audioTimestamp <= videoTimestamp && mAudioEncoder->m_EncodeEnd)
+//                mVideoEncoder->m_EncodeEnd = 1;
+//            mVideoEncoder->m_EncodeEnd = mVideoEncoder->dealOneFrame();
+//        } else {
+//            mAudioEncoder->m_EncodeEnd = mAudioEncoder->dealOneFrame();
+//        }
     }
 }
 
 void EnMuxer::stop() {
-    std::unique_lock<std::mutex> lock(m_Mutex);
+    // std::unique_lock<std::mutex> lock(m_Mutex);
     m_Exit = true;
     m_EncoderState = STATE_STOP;
-    m_Cond.notify_all();
+    // m_Cond.notify_all();
 
     mVideoEncoder->stop();
     LOGCATE("MediaRecorder::StopRecord   mVideoEncoder->stop() f");
@@ -127,6 +128,9 @@ void EnMuxer::stop() {
         encoderThread = nullptr;
     }
     LOGCATE("MediaRecorder::StopRecord  encoderThread->join() f");
+
+    mVideoEncoder->clear();
+    mAudioEncoder->clear();
 
     int ret = av_write_trailer(m_AVFormatContext);
     LOGCATE("MediaRecorder::StopRecord while av_write_trailer %s",

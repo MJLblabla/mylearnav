@@ -8,6 +8,7 @@
 #include "MessageCallback.h"
 #include "SoftVideoEncoder.h"
 #include "SoftAudioEncoder.h"
+#include "HWVideoEncoder.h"
 
 class EnMuxer {
 

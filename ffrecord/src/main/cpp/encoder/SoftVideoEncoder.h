@@ -14,9 +14,8 @@ private:
     AVCodecContext *mCodecCtx = nullptr;
     AVCodec *mVideoCodec = nullptr;
     volatile int64_t mNextPts = 0;
-    volatile bool m_Exit = false;
-    volatile int m_EncodeEnd = 0;
     AVFrame *mFrame = nullptr;
+
     //编码的数据包
     AVPacket *m_Packet = nullptr;
 
@@ -31,7 +30,7 @@ public:
     int start(AVFormatContext *m_AVFormatContext, RecorderParam *param);
 
     void stop();
-
+    void clear();
     int dealOneFrame();
 
     AVRational getTimeBase();
