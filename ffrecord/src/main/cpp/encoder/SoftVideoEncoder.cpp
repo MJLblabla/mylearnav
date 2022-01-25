@@ -13,7 +13,7 @@ int SoftVideoEncoder::start(AVFormatContext *formatCtx, RecorderParam *param) {
     if (formatCtx->oformat->video_codec != AV_CODEC_ID_NONE) {
         mVideoCodec = avcodec_find_encoder(formatCtx->oformat->video_codec);
         if (!mVideoCodec) {
-            LOGCATE("MediaRecorder::AddStream Could not find encoder for '%s'",
+            LOGCATE("SoftVideoEncoder::AddStream Could not find encoder for '%s'",
                     avcodec_get_name(formatCtx->video_codec_id));
             return -1;
         }
@@ -26,7 +26,7 @@ int SoftVideoEncoder::start(AVFormatContext *formatCtx, RecorderParam *param) {
 
     mCodecCtx = avcodec_alloc_context3(mVideoCodec);
     if (!mCodecCtx) {
-        LOGCATE("MediaRecorder::AddStream Could not alloc an encoding context");
+        LOGCATE("SoftVideoEncoder::AddStream Could not alloc an encoding context");
         return -1;
     }
     mCodecCtx->codec_id = formatCtx->video_codec_id;
@@ -55,6 +55,9 @@ int SoftVideoEncoder::start(AVFormatContext *formatCtx, RecorderParam *param) {
          * the motion of the chroma plane does not match the luma plane. */
         mCodecCtx->mb_decision = 2;
     }
+    /* Some formats want stream headers to be separate. */
+    if (formatCtx->oformat->flags & AVFMT_GLOBALHEADER)
+        mCodecCtx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
 
 //    if (m_FormatCtx.o->video_codec != AV_CODEC_ID_NONE) {
 //        AddStream(&m_VideoStream, m_FormatCtx, &mVideoCodec, m_OutputFormat->video_codec);
@@ -66,14 +69,14 @@ int SoftVideoEncoder::start(AVFormatContext *formatCtx, RecorderParam *param) {
     int ret = 0;
     ret = avcodec_open2(mCodecCtx, mVideoCodec, nullptr);
     if (ret < 0) {
-        LOGCATE("MediaRecorder::OpenVideo Could not open video codec: %s", av_err2str(ret));
+        LOGCATE("SoftVideoEncoder::OpenVideo Could not open video codec: %s", av_err2str(ret));
         return -1;
     }
     mFrame = AllocVideoFrame(mCodecCtx->pix_fmt, mCodecCtx->width, mCodecCtx->height);
     /* copy the stream parameters to the muxer */
     ret = avcodec_parameters_from_context(mAvStream->codecpar, mCodecCtx);
     if (ret < 0) {
-        LOGCATE("MediaRecorder::OpenVideo Could not copy the stream parameters");
+        LOGCATE("SoftVideoEncoder::OpenVideo Could not copy the stream parameters");
         return -1;
     }
     m_Exit = false;
@@ -82,7 +85,7 @@ int SoftVideoEncoder::start(AVFormatContext *formatCtx, RecorderParam *param) {
 }
 
 AVFrame *SoftVideoEncoder::AllocVideoFrame(AVPixelFormat pix_fmt, int width, int height) {
-    LOGCATE("MediaRecorder::AllocVideoFrame");
+    LOGCATE("SoftVideoEncoder::AllocVideoFrame");
     AVFrame *picture;
     int ret;
     picture = av_frame_alloc();
@@ -96,7 +99,7 @@ AVFrame *SoftVideoEncoder::AllocVideoFrame(AVPixelFormat pix_fmt, int width, int
     /* allocate the buffers for the frame data */
     ret = av_frame_get_buffer(picture, 1);
     if (ret < 0) {
-        LOGCATE("MediaRecorder::AllocVideoFrame Could not allocate frame data.");
+        LOGCATE("SoftVideoEncoder::AllocVideoFrame Could not allocate frame data.");
         return nullptr;
     }
     return picture;
@@ -117,7 +120,7 @@ void SoftVideoEncoder::clear() {
     }
     //delete mVideoCodec;
     mVideoCodec = nullptr;
-    if(m_Packet){
+    if (m_Packet) {
         av_packet_free(&m_Packet);
     }
 }
@@ -127,28 +130,24 @@ AVRational SoftVideoEncoder::getTimeBase() {
 }
 
 int SoftVideoEncoder::dealOneFrame() {
-    LOGCATE("MediaRecorder::EncodeVideoFrame");
-    if(m_Exit){
-        return -1;
-    }
+    LOGCATE("SoftVideoEncoder::EncodeVideoFrame %ld",mNextPts);
     int result = 0;
     int ret;
     AVCodecContext *c;
     AVFrame *frame;
-
-    if (m_Packet == nullptr) {
-        m_Packet = av_packet_alloc();
+    if(m_Packet== nullptr){
+        m_Packet =  av_packet_alloc();
     }
     c = mCodecCtx;
 
     while (mVideoFrameQueue.Empty() && !m_Exit) {
-        usleep(10 * 1000);
+        usleep(10* 1000);
     }
 
     frame = mFrame;
     AVPixelFormat srcPixFmt = AV_PIX_FMT_YUV420P;
     VideoFrame *videoFrame = mVideoFrameQueue.Pop();
-    if (videoFrame) {
+    if(videoFrame) {
         frame->data[0] = videoFrame->ppPlane[0];
         frame->data[1] = videoFrame->ppPlane[1];
         frame->data[2] = videoFrame->ppPlane[2];
@@ -157,11 +156,12 @@ int SoftVideoEncoder::dealOneFrame() {
         frame->linesize[2] = videoFrame->pLineSize[2];
         frame->width = videoFrame->width;
         frame->height = videoFrame->height;
-        frame->format = srcPixFmt;
+        frame->format=srcPixFmt;
     }
-    if ((mVideoFrameQueue.Empty() && m_Exit) || m_EncodeEnd) frame = nullptr;
 
-    if (frame != nullptr) {
+    if((mVideoFrameQueue.Empty() && m_Exit) || m_EncodeEnd) frame = nullptr;
+
+    if(frame != nullptr) {
         /* when we pass a frame to the encoder, it may keep a reference to it
         * internally; make sure we do not overwrite it here */
         if (av_frame_make_writable(mFrame) < 0) {
@@ -172,35 +172,29 @@ int SoftVideoEncoder::dealOneFrame() {
     }
 
     ret = avcodec_send_frame(c, frame);
-    if (ret == AVERROR_EOF) {
+    if(ret == AVERROR_EOF) {
         result = 1;
         goto EXIT;
-    } else if (ret < 0) {
-        LOGCATE("MediaRecorder::EncodeVideoFrame video avcodec_send_frame fail. ret=%s",
-                av_err2str(ret));
+    } else if(ret < 0) {
+        LOGCATE("SoftVideoEncoder::EncodeVideoFrame video avcodec_send_frame fail. ret=%s", av_err2str(ret));
         result = 0;
         goto EXIT;
     }
 
-    while (!ret) {
+    while(!ret) {
         ret = avcodec_receive_packet(c, m_Packet);
         if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
             result = 0;
             goto EXIT;
         } else if (ret < 0) {
-            LOGCATE("MediaRecorder::EncodeVideoFrame video avcodec_receive_packet fail. ret=%s",
-                    av_err2str(ret));
+            LOGCATE("SoftVideoEncoder::EncodeVideoFrame video avcodec_receive_packet fail. ret=%s", av_err2str(ret));
             result = 0;
             goto EXIT;
         }
-        LOGCATE("MediaRecorder::EncodeVideoFrame video pkt pts=%ld, size=%d", m_Packet->pts,
-                m_Packet->size);
-        if(m_AVFormatContext== nullptr){
-            goto EXIT;
-        }
-        int result = WritePacket(m_AVFormatContext, &c->time_base, mAvStream, m_Packet);
+        LOGCATE("SoftVideoEncoder::EncodeVideoFrame video pkt pts=%ld, size=%d", m_Packet->pts, m_Packet->size);
+         result = WritePacket(m_AVFormatContext, &c->time_base, mAvStream , m_Packet);
         if (result < 0) {
-            LOGCATE("MediaRecorder::EncodeVideoFrame video Error while writing audio frame: %s",
+            LOGCATE("SoftVideoEncoder::EncodeVideoFrame video Error while writing audio frame: %s",
                     av_err2str(ret));
             result = 0;
             goto EXIT;
@@ -210,8 +204,16 @@ int SoftVideoEncoder::dealOneFrame() {
     EXIT:
     av_packet_unref(m_Packet);
     NativeImageUtil::FreeNativeImage(videoFrame);
-    if (videoFrame) delete videoFrame;
+    if(videoFrame) delete videoFrame;
     return result;
 }
 
+int SoftVideoEncoder::WritePacket(AVFormatContext *fmt_ctx, AVRational *time_base, AVStream *st,
+                                  AVPacket *pkt) {
+    /* rescale output packet timestamp values from codec to stream timebase */
+    av_packet_rescale_ts(pkt, *time_base, st->time_base);
+    pkt->stream_index = st->index;
 
+    /* Write the compressed frame to the media file. */
+    return av_interleaved_write_frame(fmt_ctx, pkt);
+}

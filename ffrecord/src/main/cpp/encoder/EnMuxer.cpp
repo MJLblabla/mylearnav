@@ -4,8 +4,8 @@
 #include "EnMuxer.h"
 
 void EnMuxer::init(EecoderType decoderType) {
-    mVideoEncoder = new HWVideoEncoder();
-    //new SoftVideoEncoder();
+    // mVideoEncoder = new HWVideoEncoder();
+    mVideoEncoder = new SoftVideoEncoder();
     mAudioEncoder = new SoftAudioEncoder();
 }
 
@@ -90,23 +90,18 @@ void EnMuxer::loopEncoder() {
             LOGCATE("DeMuxer::DecodingLoop  stop break thread");
             break;
         }
-        mAudioEncoder->m_EncodeEnd = mAudioEncoder->dealOneFrame();
-//        double videoTimestamp = mVideoEncoder->mNextPts * av_q2d(mVideoEncoder->getTimeBase());
-//        double audioTimestamp = mAudioEncoder->mNextPts * av_q2d(mAudioEncoder->getTimeBase());
-//
-//        LOGCATE("MediaRecorder::loopEncoder [videoTimestamp, audioTimestamp]=[%lf, %lf]",
-//                videoTimestamp, audioTimestamp);
-//        if (!mVideoEncoder->m_EncodeEnd &&
-//            (mAudioEncoder->m_EncodeEnd ||
-//             av_compare_ts(mVideoEncoder->mNextPts, mVideoEncoder->getTimeBase(),
-//                           mAudioEncoder->mNextPts, mAudioEncoder->getTimeBase()) <= 0)) {
-//            //视频和音频时间戳对齐，人对于声音比较敏感，防止出现视频声音播放结束画面还没结束的情况
-//            if (audioTimestamp <= videoTimestamp && mAudioEncoder->m_EncodeEnd)
-//                mVideoEncoder->m_EncodeEnd = 1;
-//            mVideoEncoder->m_EncodeEnd = mVideoEncoder->dealOneFrame();
-//        } else {
-//            mAudioEncoder->m_EncodeEnd = mAudioEncoder->dealOneFrame();
-//        }
+
+        double videoTimestamp = mVideoEncoder->getTimestamp();
+        double audioTimestamp = mAudioEncoder->getTimestamp();
+
+        LOGCATE("MediaRecorder::loopEncoder [videoTimestamp, audioTimestamp]=[%lf, %lf]",
+                videoTimestamp, audioTimestamp);
+
+        if (audioTimestamp >= videoTimestamp) {
+            mVideoEncoder->dealOneFrame();
+        } else {
+            mAudioEncoder->dealOneFrame();
+        }
     }
 }
 

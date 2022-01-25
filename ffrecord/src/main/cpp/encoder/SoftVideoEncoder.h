@@ -20,7 +20,9 @@ private:
     AVPacket *m_Packet = nullptr;
 
     AVFrame *AllocVideoFrame(AVPixelFormat pix_fmt, int width, int height);
-
+protected:
+    int WritePacket(AVFormatContext *fmt_ctx, AVRational *time_base, AVStream *st,
+                    AVPacket *pkt);
 
 public:
     SoftVideoEncoder() {}
@@ -32,7 +34,9 @@ public:
     void stop();
     void clear();
     int dealOneFrame();
-
+    double getTimestamp(){
+        return mNextPts * av_q2d(getTimeBase());
+    }
     AVRational getTimeBase();
 };
 

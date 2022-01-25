@@ -136,3 +136,13 @@ int HWVideoEncoder::dealOneFrame() {
 AVRational HWVideoEncoder::getTimeBase() {
     return mAvStream->time_base;
 }
+
+int HWVideoEncoder::WritePacket(AVFormatContext *fmt_ctx, AVRational *time_base, AVStream *st,
+                                AVPacket *pkt) {
+    /* rescale output packet timestamp values from codec to stream timebase */
+    av_packet_rescale_ts(pkt, *time_base, st->time_base);
+    pkt->stream_index = st->index;
+
+    /* Write the compressed frame to the media file. */
+    return av_interleaved_write_frame(fmt_ctx, pkt);
+}

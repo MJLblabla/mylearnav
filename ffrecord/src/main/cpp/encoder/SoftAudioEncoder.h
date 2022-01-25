@@ -22,7 +22,9 @@ class SoftAudioEncoder : public AudioEncoder {
     AVFrame *AllocAudioFrame(AVSampleFormat sample_fmt, uint64_t channel_layout, int sample_rate,
                              int nb_samples);
 
-
+protected:
+    int WritePacket(AVFormatContext *fmt_ctx, AVRational *time_base, AVStream *st,
+                    AVPacket *pkt);
 public:
     SoftAudioEncoder() {}
 
@@ -32,7 +34,9 @@ public:
 
     void stop();
     void clear();
-
+    double getTimestamp(){
+        return mNextPts * av_q2d(getTimeBase());
+    }
     int dealOneFrame();
     AVRational getTimeBase();
 };
