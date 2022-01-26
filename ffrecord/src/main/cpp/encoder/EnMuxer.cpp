@@ -89,20 +89,18 @@ void EnMuxer::loopEncoder() {
             LOGCATE("DeMuxer::DecodingLoop  stop break thread");
             break;
         }
-//        LOGCATE("MediaRecorder::loopEncoder start");
-//        double videoTimestamp = mVideoEncoder->getTimestamp();
-//        double audioTimestamp = mAudioEncoder->getTimestamp();
-//
-//        LOGCATE("MediaRecorder::loopEncoder [videoTimestamp, audioTimestamp]=[%lf, %lf]",
-//                videoTimestamp, audioTimestamp);
-//
-//        if (audioTimestamp >= videoTimestamp) {
-//            mVideoEncoder->dealOneFrame();
-//        } else {
-//            mAudioEncoder->dealOneFrame();
-//        }
+        LOGCATE("MediaRecorder::loopEncoder start");
+        double videoTimestamp = mVideoEncoder->getTimestamp();
+        double audioTimestamp = mAudioEncoder->getTimestamp();
 
-        mAudioEncoder->dealOneFrame();
+        LOGCATE("MediaRecorder::loopEncoder [videoTimestamp, audioTimestamp]=[%lf, %lf]",
+                videoTimestamp, audioTimestamp);
+
+        if (audioTimestamp >= videoTimestamp) {
+            mVideoEncoder->dealOneFrame();
+        } else {
+            mAudioEncoder->dealOneFrame();
+        }
     }
 }
 

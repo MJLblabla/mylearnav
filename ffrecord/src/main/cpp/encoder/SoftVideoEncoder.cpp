@@ -112,19 +112,21 @@ void SoftVideoEncoder::stop() {
 }
 
 void SoftVideoEncoder::clear() {
-    avcodec_free_context(&mCodecCtx);
     av_frame_free(&mFrame);
-
     while (!mVideoFrameQueue.Empty()) {
         VideoFrame *pImage = mVideoFrameQueue.Pop();
         NativeImageUtil::FreeNativeImage(pImage);
         if (pImage) delete pImage;
     }
+
+//    if (m_Packet) {
+//        av_packet_free(&m_Packet);
+//    }
+    avcodec_free_context(&mCodecCtx);
     //delete mVideoCodec;
+    mFrame= nullptr;
     mVideoCodec = nullptr;
-    if (m_Packet) {
-        av_packet_free(&m_Packet);
-    }
+    m_Packet = nullptr;
 }
 
 AVRational SoftVideoEncoder::getTimeBase() {
@@ -132,24 +134,24 @@ AVRational SoftVideoEncoder::getTimeBase() {
 }
 
 int SoftVideoEncoder::dealOneFrame() {
-    LOGCATE("SoftVideoEncoder::EncodeVideoFrame %ld",mNextPts);
+    LOGCATE("SoftVideoEncoder::EncodeVideoFrame %ld", mNextPts);
     int result = 0;
     int ret;
     AVCodecContext *c;
     AVFrame *frame;
-    if(m_Packet== nullptr){
-        m_Packet =  av_packet_alloc();
+    if (m_Packet == nullptr) {
+        m_Packet = av_packet_alloc();
     }
     c = mCodecCtx;
 
     while (mVideoFrameQueue.Empty() && !m_Exit) {
-        usleep(10* 1000);
+        usleep(10 * 1000);
     }
 
     frame = mFrame;
     AVPixelFormat srcPixFmt = AV_PIX_FMT_YUV420P;
     VideoFrame *videoFrame = mVideoFrameQueue.Pop();
-    if(videoFrame) {
+    if (videoFrame) {
         frame->data[0] = videoFrame->ppPlane[0];
         frame->data[1] = videoFrame->ppPlane[1];
         frame->data[2] = videoFrame->ppPlane[2];
@@ -158,12 +160,12 @@ int SoftVideoEncoder::dealOneFrame() {
         frame->linesize[2] = videoFrame->pLineSize[2];
         frame->width = videoFrame->width;
         frame->height = videoFrame->height;
-        frame->format=srcPixFmt;
+        frame->format = srcPixFmt;
     }
 
-    if((mVideoFrameQueue.Empty() && m_Exit) || m_EncodeEnd) frame = nullptr;
+    if ((mVideoFrameQueue.Empty() && m_Exit) || m_EncodeEnd) frame = nullptr;
 
-    if(frame != nullptr) {
+    if (frame != nullptr) {
         /* when we pass a frame to the encoder, it may keep a reference to it
         * internally; make sure we do not overwrite it here */
         if (av_frame_make_writable(mFrame) < 0) {
@@ -174,27 +176,30 @@ int SoftVideoEncoder::dealOneFrame() {
     }
 
     ret = avcodec_send_frame(c, frame);
-    if(ret == AVERROR_EOF) {
+    if (ret == AVERROR_EOF) {
         result = 1;
         goto EXIT;
-    } else if(ret < 0) {
-        LOGCATE("SoftVideoEncoder::EncodeVideoFrame video avcodec_send_frame fail. ret=%s", av_err2str(ret));
+    } else if (ret < 0) {
+        LOGCATE("SoftVideoEncoder::EncodeVideoFrame video avcodec_send_frame fail. ret=%s",
+                av_err2str(ret));
         result = 0;
         goto EXIT;
     }
 
-    while(!ret) {
+    while (!ret) {
         ret = avcodec_receive_packet(c, m_Packet);
         if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
             result = 0;
             goto EXIT;
         } else if (ret < 0) {
-            LOGCATE("SoftVideoEncoder::EncodeVideoFrame video avcodec_receive_packet fail. ret=%s", av_err2str(ret));
+            LOGCATE("SoftVideoEncoder::EncodeVideoFrame video avcodec_receive_packet fail. ret=%s",
+                    av_err2str(ret));
             result = 0;
             goto EXIT;
         }
-        LOGCATE("SoftVideoEncoder::EncodeVideoFrame video pkt pts=%ld, size=%d", m_Packet->pts, m_Packet->size);
-         result = WritePacket(m_AVFormatContext, &c->time_base, mAvStream , m_Packet);
+        LOGCATE("SoftVideoEncoder::EncodeVideoFrame video pkt pts=%ld, size=%d", m_Packet->pts,
+                m_Packet->size);
+        result = WritePacket(m_AVFormatContext, &c->time_base, mAvStream, m_Packet);
         if (result < 0) {
             LOGCATE("SoftVideoEncoder::EncodeVideoFrame video Error while writing audio frame: %s",
                     av_err2str(ret));
@@ -206,7 +211,7 @@ int SoftVideoEncoder::dealOneFrame() {
     EXIT:
     av_packet_unref(m_Packet);
     NativeImageUtil::FreeNativeImage(videoFrame);
-    if(videoFrame) delete videoFrame;
+    if (videoFrame) delete videoFrame;
     return result;
 }
 

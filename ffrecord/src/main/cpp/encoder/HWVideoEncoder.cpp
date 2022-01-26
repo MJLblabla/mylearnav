@@ -13,6 +13,59 @@ int HWVideoEncoder::start(AVFormatContext *formatCtx, RecorderParam *param) {
     mAvStream->time_base = (AVRational) {1, m_RecorderParam.fps};
 
 
+    if (formatCtx->oformat->video_codec != AV_CODEC_ID_NONE) {
+        mVideoCodec = avcodec_find_encoder(formatCtx->oformat->video_codec);
+        if (!mVideoCodec) {
+            LOGCATE("SoftVideoEncoder::AddStream Could not find encoder for '%s'",
+                    avcodec_get_name(formatCtx->video_codec_id));
+            return -1;
+        }
+    } else {
+        return -1;
+    }
+    mCodecCtx = avcodec_alloc_context3(mVideoCodec);
+    if (!mCodecCtx) {
+        LOGCATE("SoftVideoEncoder::AddStream Could not alloc an encoding context");
+        return -1;
+    }
+    mCodecCtx->codec_id = formatCtx->video_codec_id;
+    mCodecCtx->bit_rate = m_RecorderParam.videoBitRate;
+    /* Resolution must be a multiple of two. */
+    mCodecCtx->width = m_RecorderParam.frameWidth;
+    mCodecCtx->height = m_RecorderParam.frameHeight;
+    /* timebase: This is the fundamental unit of time (in seconds) in terms
+     * of which frame timestamps are represented. For fixed-fps content,
+     * timebase should be 1/framerate and timestamp increments should be
+     * identical to 1. */
+    mAvStream->time_base = (AVRational) {1, m_RecorderParam.fps};
+
+    mCodecCtx->time_base = mAvStream->time_base;
+
+    mCodecCtx->gop_size = 12; /* emit one intra frame every twelve frames at most */
+    mCodecCtx->pix_fmt = AV_PIX_FMT_YUV420P;
+    if (mCodecCtx->codec_id == AV_CODEC_ID_MPEG2VIDEO) {
+        /* just for testing, we also add B-frames */
+        mCodecCtx->max_b_frames = 2;
+    }
+
+    if (mCodecCtx->codec_id == AV_CODEC_ID_MPEG1VIDEO) {
+        /* Needed to avoid using macroblocks in which some coeffs overflow.
+         * This does not happen with normal video, it just happens here as
+         * the motion of the chroma plane does not match the luma plane. */
+        mCodecCtx->mb_decision = 2;
+    }
+    /* Some formats want stream headers to be separate. */
+    if (formatCtx->oformat->flags & AVFMT_GLOBALHEADER)
+        mCodecCtx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+
+    int ret = 0;
+    ret = avcodec_open2(mCodecCtx, mVideoCodec, nullptr);
+    if (ret < 0) {
+        LOGCATE("SoftVideoEncoder::OpenVideo Could not open video codec: %s", av_err2str(ret));
+        return -1;
+    }
+    /* copy the stream parameters to the muxer */
+    ret = avcodec_parameters_from_context(mAvStream->codecpar, mCodecCtx);
 
 
     pMediaCodec = AMediaCodec_createEncoderByType("video/avc");//h264 // 创建 codec 编码器
@@ -41,6 +94,7 @@ int HWVideoEncoder::start(AVFormatContext *formatCtx, RecorderParam *param) {
         return -1;
     }
     AMediaCodec_start(pMediaCodec);
+
     m_Exit = false;
     m_EncodeEnd = 0;
     return 1;
@@ -53,6 +107,11 @@ void HWVideoEncoder::stop() {
 }
 
 void HWVideoEncoder::clear() {
+
+    avcodec_free_context(&mCodecCtx);
+    //delete mVideoCodec;
+    mVideoCodec = nullptr;
+
     AMediaCodec_stop(pMediaCodec);
     AMediaCodec_delete(pMediaCodec);
     pMediaCodec = nullptr;
@@ -61,9 +120,9 @@ void HWVideoEncoder::clear() {
         NativeImageUtil::FreeNativeImage(pImage);
         if (pImage) delete pImage;
     }
-    if (m_Packet) {
-        av_packet_free(&m_Packet);
-    }
+
+    mVideoCodec = nullptr;
+    m_Packet = nullptr;
 }
 
 
@@ -73,7 +132,7 @@ int HWVideoEncoder::dealOneFrame() {
     if (m_Exit) {
         return -1;
     }
-
+    int result = 0;
     if (m_Packet == nullptr) {
         m_Packet = av_packet_alloc();
     }
@@ -92,12 +151,15 @@ int HWVideoEncoder::dealOneFrame() {
         //填充yuv数据
         int frameLenYuv = m_RecorderParam.frameWidth * m_RecorderParam.frameHeight * 3 / 2;
         //  LOGCATE("HWVideoEncoder::AMediaCodec_getInputBuffer  bufsize %s %d",bufsize,frameLenYuv);
-        memcpy(buf, videoFrame->ppPlane[0], bufsize);
-
-        AMediaCodec_queueInputBuffer(pMediaCodec, bufidx, 0, frameLenYuv,
-                                     pts * av_q2d(getTimeBase()), 0);
+        if (m_Exit || buf == nullptr || videoFrame->ppPlane[0] == nullptr) {
+        } else {
+            LOGCATE("HWVideoEncoder::AMediaCodec_queueInputBuffer  bufsize %zu  bufidx %zd",
+                    bufsize, bufidx);
+            memcpy(buf, videoFrame->ppPlane[0], frameLenYuv);
+            AMediaCodec_queueInputBuffer(pMediaCodec, bufidx, 0, frameLenYuv,
+                                         pts * av_q2d(getTimeBase()), 0);
+        }
     }
-
     AMediaCodecBufferInfo info;
     //取输出buffer
     auto outindex = AMediaCodec_dequeueOutputBuffer(pMediaCodec, &info, 1000);
@@ -105,41 +167,52 @@ int HWVideoEncoder::dealOneFrame() {
         //在这里取走编码后的数据
         //释放buffer给编码器
         size_t outsize;
-        uint8_t *buf = AMediaCodec_getOutputBuffer(pMediaCodec, outindex, &outsize);
+        uint8_t *buf = AMediaCodec_getOutputBuffer(pMediaCodec, outindex, NULL);
 
-        //BUFFER_FLAG_KEY_FRAME =1
-        bool isKeyFrame = (info.flags & 1) != 0;
-
-        AVPacket *packet = av_packet_alloc();
-
-        av_init_packet(packet);
-
-        packet->stream_index = mAvStream->id;
-
-        packet->data = buf;
-
-        packet->size = outsize;
-
-        packet->pts = av_rescale_q(info.presentationTimeUs, {1, 1000000}, mAvStream->time_base);
-
-        if (isKeyFrame) packet->flags |= AV_PKT_FLAG_KEY;
-
-        LOGCATE("HWVideoEncoder::AMediaCodec_getOutputBuffer  bufsize");
-        AVRational *cAVRational = new AVRational{1, 1000000};
-        int result = WritePacket(m_AVFormatContext, cAVRational, mAvStream, m_Packet);
-        delete cAVRational;
-        if (result < 0) {
-            LOGCATE("HWVideoEncoder::EncodeVideoFrame video Error while writing audio frame: %s",
-                    av_err2str(result));
-            result = 0;
+        if ((info.flags & AMEDIACODEC_BUFFER_FLAG_CODEC_CONFIG) != 0) {
+            info.size = 0;
         }
+        if (info.size != 0) {
+
+            //BUFFER_FLAG_KEY_FRAME =1
+            bool isKeyFrame = (info.flags & 1) != 0;
+            AVPacket *packet = av_packet_alloc();
+            av_init_packet(packet);
+            packet->stream_index = mAvStream->id;
+            int pts = av_rescale_q(info.presentationTimeUs, AV_TIME_BASE_Q, mCodecCtx->time_base);
+            memcpy(packet->data, buf + info.offset, info.size);
+            packet->size = info.size - info.offset;
+
+            packet->pts =pts;
+            packet->dts = pts;
+            packet->flags = info.flags;
+            LOGCATE("HWVideoEncoder::AMediaCodec_dequeueOutputBuffer  bufsize %d  bufidx %ld",
+                    info.size,
+                    outindex);
+
+            if (m_Exit) {
+                result = 0;
+                AMediaCodec_releaseOutputBuffer(pMediaCodec, outindex, false);
+                goto EXIT;
+            }
+
+            result = WritePacket(m_AVFormatContext, &mCodecCtx->time_base, mAvStream, m_Packet);
+
+            if (result < 0) {
+                LOGCATE("HWVideoEncoder::AMediaCodec_ video Error while writing  frame: %s",
+                        av_err2str(result));
+                result = 0;
+            }
+        }
+
         AMediaCodec_releaseOutputBuffer(pMediaCodec, outindex, false);
     }
 
+    EXIT:
     av_packet_unref(m_Packet);
     NativeImageUtil::FreeNativeImage(videoFrame);
     if (videoFrame) delete videoFrame;
-    return 0;
+    return result;
 }
 
 AVRational HWVideoEncoder::getTimeBase() {

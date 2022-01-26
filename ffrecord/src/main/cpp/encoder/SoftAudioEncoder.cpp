@@ -142,9 +142,13 @@ void SoftAudioEncoder::clear() {
         delete pImage;
         pImage = nullptr;
     }
+    if (m_pSwsCtx) {
+        sws_freeContext(m_pSwsCtx);
+    }
+    if (m_pSwrCtx) {
+        swr_free(&m_pSwrCtx);
+    }
 
-    sws_freeContext(m_pSwsCtx);
-    swr_free(&m_pSwrCtx);
     if (m_pTmpFrame != nullptr) {
         av_free(m_pTmpFrame);
         m_pTmpFrame = nullptr;
@@ -179,6 +183,8 @@ int SoftAudioEncoder::dealOneFrame() {
     frame = m_pTmpFrame;
     if (audioFrame) {
         frame->data[0] = audioFrame->data;
+
+        //一坨16位深bit 占用一个通道有多少样本数量
         frame->nb_samples = audioFrame->dataSize / 4;
         frame->pts = mNextPts;
         mNextPts += frame->nb_samples;
@@ -219,10 +225,13 @@ int SoftAudioEncoder::dealOneFrame() {
         frame = m_pFrame;
 
         frame->pts = av_rescale_q(m_SamplesCount, (AVRational) {1, c->sample_rate}, c->time_base);
+
+        LOGCATE("SoftAudioEncoder::EncodeAudioFrame 音频时间戳 frame->pts=%ld, m_SamplesCount=%d",
+                frame->pts,
+                m_SamplesCount);
         m_SamplesCount += dst_nb_samples;
 
-        LOGCATE("SoftAudioEncoder::EncodeAudioFrame frame->pts=%ld, m_SamplesCount=%d", frame->pts,
-                m_SamplesCount);
+
     }
 
     ret = avcodec_send_frame(c, frame);
@@ -270,6 +279,6 @@ int SoftAudioEncoder::WritePacket(AVFormatContext *fmt_ctx, AVRational *time_bas
     av_packet_rescale_ts(pkt, *time_base, st->time_base);
     pkt->stream_index = st->index;
     /* Write the compressed frame to the media file. */
-    int ret= av_interleaved_write_frame(fmt_ctx, pkt);
+    int ret = av_interleaved_write_frame(fmt_ctx, pkt);
     return ret;
 }

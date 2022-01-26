@@ -13,11 +13,11 @@ class SoftAudioEncoder : public AudioEncoder {
     AVCodecContext *mCodecCtx = nullptr;
     AVCodec *mAdioCodec = nullptr;
 
-    int m_SamplesCount;
-    AVFrame *m_pFrame;
-    AVFrame *m_pTmpFrame;
-    SwsContext *m_pSwsCtx;
-    SwrContext *m_pSwrCtx;
+    int m_SamplesCount = 0;
+    AVFrame *m_pFrame = nullptr;
+    AVFrame *m_pTmpFrame = nullptr;
+    SwsContext *m_pSwsCtx = nullptr;
+    SwrContext *m_pSwrCtx = nullptr;
 
     AVFrame *AllocAudioFrame(AVSampleFormat sample_fmt, uint64_t channel_layout, int sample_rate,
                              int nb_samples);
@@ -25,6 +25,7 @@ class SoftAudioEncoder : public AudioEncoder {
 protected:
     int WritePacket(AVFormatContext *fmt_ctx, AVRational *time_base, AVStream *st,
                     AVPacket *pkt);
+
 public:
     SoftAudioEncoder() {}
 
@@ -33,11 +34,15 @@ public:
     int start(AVFormatContext *formatCtx, RecorderParam *param);
 
     void stop();
+
     void clear();
-    double getTimestamp(){
+
+    double getTimestamp() {
         return mNextPts * av_q2d(getTimeBase());
     }
+
     int dealOneFrame();
+
     AVRational getTimeBase();
 };
 
