@@ -4,8 +4,8 @@
 #include "EnMuxer.h"
 
 void EnMuxer::init(EecoderType decoderType) {
-    // mVideoEncoder = new HWVideoEncoder();
-    mVideoEncoder = new SoftVideoEncoder();
+    mVideoEncoder = new HWVideoEncoder();
+   // mVideoEncoder = new SoftVideoEncoder();
     mAudioEncoder = new SoftAudioEncoder();
 }
 
@@ -15,7 +15,6 @@ int EnMuxer::onFrame2Encode(AudioFrame *inputFrame) {
         inputFrame = nullptr;
         return 0;
     }
-
     mAudioEncoder->pushImg(inputFrame);
     return 1;
 }
@@ -78,8 +77,8 @@ void EnMuxer::startMediaEncodeThread(EnMuxer *recorder) {
 }
 
 void EnMuxer::loopEncoder() {
-    while (!m_Exit) {
 
+    while (!m_Exit) {
         while (m_EncoderState == STATE_PAUSE) {
             std::unique_lock<std::mutex> lock(m_Mutex);
             LOGCATE("DeMuxer::DecodingLoop waiting, m_MediaType");
@@ -90,18 +89,20 @@ void EnMuxer::loopEncoder() {
             LOGCATE("DeMuxer::DecodingLoop  stop break thread");
             break;
         }
+//        LOGCATE("MediaRecorder::loopEncoder start");
+//        double videoTimestamp = mVideoEncoder->getTimestamp();
+//        double audioTimestamp = mAudioEncoder->getTimestamp();
+//
+//        LOGCATE("MediaRecorder::loopEncoder [videoTimestamp, audioTimestamp]=[%lf, %lf]",
+//                videoTimestamp, audioTimestamp);
+//
+//        if (audioTimestamp >= videoTimestamp) {
+//            mVideoEncoder->dealOneFrame();
+//        } else {
+//            mAudioEncoder->dealOneFrame();
+//        }
 
-        double videoTimestamp = mVideoEncoder->getTimestamp();
-        double audioTimestamp = mAudioEncoder->getTimestamp();
-
-        LOGCATE("MediaRecorder::loopEncoder [videoTimestamp, audioTimestamp]=[%lf, %lf]",
-                videoTimestamp, audioTimestamp);
-
-        if (audioTimestamp >= videoTimestamp) {
-            mVideoEncoder->dealOneFrame();
-        } else {
-            mAudioEncoder->dealOneFrame();
-        }
+        mAudioEncoder->dealOneFrame();
     }
 }
 

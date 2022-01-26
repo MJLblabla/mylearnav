@@ -12,6 +12,9 @@ int HWVideoEncoder::start(AVFormatContext *formatCtx, RecorderParam *param) {
     mAvStream->id = m_AVFormatContext->nb_streams - 1;
     mAvStream->time_base = (AVRational) {1, m_RecorderParam.fps};
 
+
+
+
     pMediaCodec = AMediaCodec_createEncoderByType("video/avc");//h264 // 创建 codec 编码器
     if (pMediaCodec == nullptr) {
         LOGCATE("HWVideoEncoder::AMediaCodec_createEncoderByType  error");
@@ -66,9 +69,11 @@ void HWVideoEncoder::clear() {
 
 int HWVideoEncoder::dealOneFrame() {
     LOGCATE("HWVideoEncoder::dealOneFrame ");
+
     if (m_Exit) {
         return -1;
     }
+
     if (m_Packet == nullptr) {
         m_Packet = av_packet_alloc();
     }
@@ -82,15 +87,17 @@ int HWVideoEncoder::dealOneFrame() {
     if (bufidx >= 0) {
         videoFrame = mVideoFrameQueue.Pop();
         size_t bufsize;
-        int64_t pts = mNextPts++;
+        int pts = mNextPts++;
         uint8_t *buf = AMediaCodec_getInputBuffer(pMediaCodec, bufidx, &bufsize);
         //填充yuv数据
         int frameLenYuv = m_RecorderParam.frameWidth * m_RecorderParam.frameHeight * 3 / 2;
         //  LOGCATE("HWVideoEncoder::AMediaCodec_getInputBuffer  bufsize %s %d",bufsize,frameLenYuv);
         memcpy(buf, videoFrame->ppPlane[0], bufsize);
 
-        AMediaCodec_queueInputBuffer(pMediaCodec, bufidx, 0, frameLenYuv, pts, 0);
+        AMediaCodec_queueInputBuffer(pMediaCodec, bufidx, 0, frameLenYuv,
+                                     pts * av_q2d(getTimeBase()), 0);
     }
+
     AMediaCodecBufferInfo info;
     //取输出buffer
     auto outindex = AMediaCodec_dequeueOutputBuffer(pMediaCodec, &info, 1000);
@@ -118,7 +125,9 @@ int HWVideoEncoder::dealOneFrame() {
         if (isKeyFrame) packet->flags |= AV_PKT_FLAG_KEY;
 
         LOGCATE("HWVideoEncoder::AMediaCodec_getOutputBuffer  bufsize");
-        int result = WritePacket(m_AVFormatContext, &(mAvStream->time_base), mAvStream, m_Packet);
+        AVRational *cAVRational = new AVRational{1, 1000000};
+        int result = WritePacket(m_AVFormatContext, cAVRational, mAvStream, m_Packet);
+        delete cAVRational;
         if (result < 0) {
             LOGCATE("HWVideoEncoder::EncodeVideoFrame video Error while writing audio frame: %s",
                     av_err2str(result));

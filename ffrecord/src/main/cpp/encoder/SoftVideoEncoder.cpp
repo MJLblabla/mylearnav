@@ -72,6 +72,8 @@ int SoftVideoEncoder::start(AVFormatContext *formatCtx, RecorderParam *param) {
         LOGCATE("SoftVideoEncoder::OpenVideo Could not open video codec: %s", av_err2str(ret));
         return -1;
     }
+
+
     mFrame = AllocVideoFrame(mCodecCtx->pix_fmt, mCodecCtx->width, mCodecCtx->height);
     /* copy the stream parameters to the muxer */
     ret = avcodec_parameters_from_context(mAvStream->codecpar, mCodecCtx);
