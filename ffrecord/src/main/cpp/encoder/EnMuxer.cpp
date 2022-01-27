@@ -5,7 +5,7 @@
 
 void EnMuxer::init(EecoderType decoderType) {
     mVideoEncoder = new HWVideoEncoder();
-   // mVideoEncoder = new SoftVideoEncoder();
+ //   mVideoEncoder = new SoftVideoEncoder();
     mAudioEncoder = new SoftAudioEncoder();
 }
 
@@ -44,9 +44,9 @@ void EnMuxer::start(const char *url, RecorderParam *param) {
         return;
     }
 
+
     mVideoEncoder->start(m_AVFormatContext, param);
     mAudioEncoder->start(m_AVFormatContext, param);
-
     // mx
     av_dump_format(m_AVFormatContext, 0, m_OutUrl, 1);
     /* open the output file, if needed */
@@ -68,6 +68,7 @@ void EnMuxer::start(const char *url, RecorderParam *param) {
         result = -1;
     }
     m_EncoderState = STATE_DECODING;
+
     if (encoderThread == nullptr)
         encoderThread = new thread(startMediaEncodeThread, this);
 }

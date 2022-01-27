@@ -11,7 +11,6 @@ int SoftAudioEncoder::start(AVFormatContext *formatCtx, RecorderParam *param) {
     /**
      * add stream
      */
-
     if (formatCtx->oformat->audio_codec != AV_CODEC_ID_NONE) {
         mAdioCodec = avcodec_find_encoder(formatCtx->oformat->audio_codec);
         if (!mAdioCodec) {
@@ -230,7 +229,6 @@ int SoftAudioEncoder::dealOneFrame() {
                 frame->pts,
                 m_SamplesCount);
         m_SamplesCount += dst_nb_samples;
-
 
     }
 

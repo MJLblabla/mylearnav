@@ -15,11 +15,10 @@ private:
     AMediaCodec *pMediaCodec;
     AMediaFormat *format;
 
-    AVCodecContext *mCodecCtx = nullptr;
-    AVCodec *mVideoCodec = nullptr;
-
     //编码的数据包
     AVPacket *m_Packet = nullptr;
+
+
 protected:
     int WritePacket(AVFormatContext *fmt_ctx, AVRational *time_base, AVStream *st,
                     AVPacket *pkt);
