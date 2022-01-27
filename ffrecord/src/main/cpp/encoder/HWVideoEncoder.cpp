@@ -81,7 +81,7 @@ int HWVideoEncoder::start(AVFormatContext *formatCtx, RecorderParam *param) {
     //在OMX_IVCommon.h https://www.androidos.net.cn/android/9.0.0_r8/xref/frameworks/native/headers/media_plugin/media/openmax/OMX_IVCommon.h
     // AMediaFormat_setInt32(format,AMEDIAFORMAT_KEY_COLOR_FORMAT,OMX_COLOR_FormatYUV420Planar);
     //i420
-    AMediaFormat_setInt32(format, AMEDIAFORMAT_KEY_COLOR_FORMAT, 19);
+    AMediaFormat_setInt32(format, AMEDIAFORMAT_KEY_COLOR_FORMAT, 21);
     AMediaFormat_setInt32(format, AMEDIAFORMAT_KEY_FRAME_RATE, param->fps);
     AMediaFormat_setInt32(format, AMEDIAFORMAT_KEY_BIT_RATE, param->videoBitRate);
     AMediaFormat_setInt32(format, AMEDIAFORMAT_KEY_I_FRAME_INTERVAL, 5);
@@ -93,8 +93,13 @@ int HWVideoEncoder::start(AVFormatContext *formatCtx, RecorderParam *param) {
         LOGCATE("HWVideoEncoder::AMediaCodec_configure  error");
         return -1;
     }
-    AMediaCodec_start(pMediaCodec);
 
+    if ((status = AMediaCodec_start(pMediaCodec)) != AMEDIA_OK) {
+        LOGCATE("AMediaCodec_start: Could not start encoder.");
+        return -1;
+    } else {
+        LOGCATE("AMediaCodec_start: encoder successfully started");
+    }
     m_Exit = false;
     m_EncodeEnd = 0;
     return 1;
@@ -132,26 +137,31 @@ int HWVideoEncoder::dealOneFrame() {
     if (m_Exit) {
         return -1;
     }
+
     int result = 0;
     if (m_Packet == nullptr) {
         m_Packet = av_packet_alloc();
     }
-
-    ssize_t bufidx = AMediaCodec_dequeueInputBuffer(pMediaCodec, 0);
     while (mVideoFrameQueue.Empty() && !m_Exit) {
         usleep(10 * 1000);
     }
-    AVPixelFormat srcPixFmt = AV_PIX_FMT_YUV420P;
     VideoFrame *videoFrame = nullptr;
+    videoFrame = mVideoFrameQueue.Pop();
+    if (m_Exit || videoFrame == nullptr) {
+        return -1;
+    }
+    size_t bufsize;
+    ssize_t bufidx = AMediaCodec_dequeueInputBuffer(pMediaCodec, 1);
+
     if (bufidx >= 0) {
-        videoFrame = mVideoFrameQueue.Pop();
-        size_t bufsize;
         int pts = mNextPts++;
         uint8_t *buf = AMediaCodec_getInputBuffer(pMediaCodec, bufidx, &bufsize);
         //填充yuv数据
+
         int frameLenYuv = m_RecorderParam.frameWidth * m_RecorderParam.frameHeight * 3 / 2;
         //  LOGCATE("HWVideoEncoder::AMediaCodec_getInputBuffer  bufsize %s %d",bufsize,frameLenYuv);
         if (m_Exit || buf == nullptr || videoFrame->ppPlane[0] == nullptr) {
+            LOGCATE("MediaCodecH264Enc: obtained InputBuffer, but no address.");
         } else {
             LOGCATE("HWVideoEncoder::AMediaCodec_queueInputBuffer  bufsize %zu  bufidx %zd",
                     bufsize, bufidx);
@@ -160,58 +170,48 @@ int HWVideoEncoder::dealOneFrame() {
                                          pts * av_q2d(getTimeBase()), 0);
         }
     }
+
     AMediaCodecBufferInfo info;
-    //取输出buffer
-    auto outindex = AMediaCodec_dequeueOutputBuffer(pMediaCodec, &info, 1000);
-    if (outindex >= 0 && m_AVFormatContext != nullptr && !m_Exit) {
-        //在这里取走编码后的数据
-        //释放buffer给编码器
-        size_t outsize;
-        uint8_t *buf = AMediaCodec_getOutputBuffer(pMediaCodec, outindex, NULL);
-
-        if ((info.flags & AMEDIACODEC_BUFFER_FLAG_CODEC_CONFIG) != 0) {
-            info.size = 0;
+    ssize_t obufidx;
+    //int pos = 0;
+    /*Second, dequeue possibly pending encoded frames*/
+    while ((obufidx = AMediaCodec_dequeueOutputBuffer(pMediaCodec, &info, 0)) >= 0) {
+        if (m_AVFormatContext == nullptr || m_Exit) {
+            goto EXIT;
         }
-        if (info.size != 0) {
+        auto oBuf = AMediaCodec_getOutputBuffer(pMediaCodec, obufidx, &bufsize);
 
-            //BUFFER_FLAG_KEY_FRAME =1
-            bool isKeyFrame = (info.flags & 1) != 0;
-            AVPacket *packet = av_packet_alloc();
-            av_init_packet(packet);
-            packet->stream_index = mAvStream->id;
-            int pts = av_rescale_q(info.presentationTimeUs, AV_TIME_BASE_Q, mCodecCtx->time_base);
-            memcpy(packet->data, buf + info.offset, info.size);
-            packet->size = info.size - info.offset;
-
-            packet->pts =pts;
-            packet->dts = pts;
-            packet->flags = info.flags;
-            LOGCATE("HWVideoEncoder::AMediaCodec_dequeueOutputBuffer  bufsize %d  bufidx %ld",
-                    info.size,
-                    outindex);
-
-            if (m_Exit) {
-                result = 0;
-                AMediaCodec_releaseOutputBuffer(pMediaCodec, outindex, false);
-                goto EXIT;
-            }
-
+        if (oBuf) {
+            int m_infoSize = info.size;
+            m_Packet->data = static_cast<uint8_t *>(malloc(m_infoSize));
+            memcpy(m_Packet->data, oBuf, m_infoSize);
+            m_Packet->stream_index = mAvStream->id;
+            int pts = av_rescale_q(info.presentationTimeUs, AV_TIME_BASE_Q,
+                                   mCodecCtx->time_base);
+            m_Packet->size = info.size - info.offset;
+            m_Packet->pts = pts;
+            m_Packet->dts = pts;
+            m_Packet->flags = info.flags;
             result = WritePacket(m_AVFormatContext, &mCodecCtx->time_base, mAvStream, m_Packet);
-
             if (result < 0) {
-                LOGCATE("HWVideoEncoder::AMediaCodec_ video Error while writing  frame: %s",
+                LOGCATE("HWVideoEncoder::EncodeVideoFrame video Error while writing audio frame: %s",
                         av_err2str(result));
                 result = 0;
+                goto EXIT;
             }
         }
 
-        AMediaCodec_releaseOutputBuffer(pMediaCodec, outindex, false);
+        AMediaCodec_releaseOutputBuffer(pMediaCodec, obufidx, false);
+    }
+
+    if (obufidx == AMEDIA_ERROR_UNKNOWN) {
+        goto EXIT;
     }
 
     EXIT:
     av_packet_unref(m_Packet);
     NativeImageUtil::FreeNativeImage(videoFrame);
-    if (videoFrame) delete videoFrame;
+    delete videoFrame;
     return result;
 }
 
