@@ -9,7 +9,8 @@
 #include <cstdint>
 #include <jni.h>
 
-#include "../encoder/EnMuxer.h"
+#include "../softencoder/EnMuxer.h"
+#include "../hwcodec/NativeMediaMuxer.h"
 #define RECORDER_TYPE_SINGLE_VIDEO  0 //仅录制视频
 #define RECORDER_TYPE_SINGLE_AUDIO  1 //仅录制音频
 #define RECORDER_TYPE_AV            2 //同时录制音频和视频,打包成 MP4 文件
@@ -27,7 +28,7 @@ public:
     static MediaRecorderContext *GetContext(JNIEnv *env, jobject instance);
 
     int StartRecord(int recorderType, const char *outUrl, int frameWidth, int frameHeight,
-                    long videoBitRate, int fps);
+                    int videoBitRate, int fps);
 
     void OnAudioData(uint8_t *pData, int size);
 
@@ -41,7 +42,7 @@ private:
     static jfieldID s_ContextHandle;
 
     static void StoreContext(JNIEnv *env, jobject instance, MediaRecorderContext *pContext);
-    EnMuxer *mEnMuxer= nullptr;
+    IEnMuxer *mEnMuxer= nullptr;
     mutex m_mutex;
 
 };

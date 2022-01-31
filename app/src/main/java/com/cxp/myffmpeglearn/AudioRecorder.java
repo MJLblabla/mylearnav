@@ -32,7 +32,6 @@ public class AudioRecorder {
             mRecorderCallback.onError("parameters are not supported by the hardware.");
             return;
         }
-
         mAudioRecord = new AudioRecord(android.media.MediaRecorder.AudioSource.MIC, DEFAULT_SAMPLE_RATE, DEFAULT_CHANNEL_LAYOUT, DEFAULT_SAMPLE_FORMAT, mMinBufferSize);
 
         start();

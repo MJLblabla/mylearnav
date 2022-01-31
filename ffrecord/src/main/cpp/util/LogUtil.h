@@ -7,7 +7,7 @@
 
 #include<android/log.h>
 #include <sys/time.h>
-
+#include <time.h>
 #define  LOG_TAG "ByteFlow"
 
 #define  LOGCATE(...)  __android_log_print(ANDROID_LOG_ERROR,LOG_TAG,__VA_ARGS__)
@@ -42,6 +42,12 @@ static long long GetSysCurrentTime()
 	gettimeofday(&time, NULL);
 	long long curTime = ((long long)(time.tv_sec))*1000+time.tv_usec/1000;
 	return curTime;
+}
+static long long GetSysCurrentTimeNS()
+{
+    struct timespec now;
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    return now.tv_sec * 1000000000LL + now.tv_nsec;
 }
 
 #define GO_CHECK_GL_ERROR(...)   LOGCATE("CHECK_GL_ERROR %s glGetError = %d, line = %d, ",  __FUNCTION__, glGetError(), __LINE__)

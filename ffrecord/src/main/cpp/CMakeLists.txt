@@ -20,7 +20,8 @@ set(libname learn-ffmpeg)
 include_directories(
         include
         recorder
-        encoder
+        softencoder
+        hwcodec
         common
         util
      )
@@ -38,7 +39,8 @@ link_directories(
 file(GLOB src-files
         ${CMAKE_SOURCE_DIR}/*.cpp
         ${CMAKE_SOURCE_DIR}/recorder/*.cpp
-        ${CMAKE_SOURCE_DIR}/encoder/*.cpp
+        ${CMAKE_SOURCE_DIR}/hwcodec/*.cpp
+        ${CMAKE_SOURCE_DIR}/softencoder/*.cpp
         )
 
 add_library( # Sets the name of the library.

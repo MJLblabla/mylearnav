@@ -11,8 +11,9 @@
 jfieldID MediaRecorderContext::s_ContextHandle = 0L;
 
 MediaRecorderContext::MediaRecorderContext() {
-    mEnMuxer = new EnMuxer();
-    mEnMuxer->init(SOFT);
+    mEnMuxer = new NativeMediaMuxer();
+    //mEnMuxer = new EnMuxer();
+    mEnMuxer->init();
 }
 
 MediaRecorderContext::~MediaRecorderContext() {
@@ -61,7 +62,6 @@ void MediaRecorderContext::DeleteContext(JNIEnv *env, jobject instance) {
 }
 
 MediaRecorderContext *MediaRecorderContext::GetContext(JNIEnv *env, jobject instance) {
-    LOGCATE("MediaRecorderContext::GetContext");
 
     if (s_ContextHandle == NULL) {
         LOGCATE("MediaRecorderContext::GetContext Could not find play.render context.");
@@ -75,7 +75,7 @@ MediaRecorderContext *MediaRecorderContext::GetContext(JNIEnv *env, jobject inst
 
 int
 MediaRecorderContext::StartRecord(int recorderType, const char *outUrl, int frameWidth,
-                                  int frameHeight, long videoBitRate,
+                                  int frameHeight, int videoBitRate,
                                   int fps) {
     isStart = true;
     LOGCATE("MediaRecorderContext::StartRecord recorderType=%d, outUrl=%s, [w,h]=[%d,%d], videoBitRate=%ld, fps=%d",
@@ -118,8 +118,6 @@ int MediaRecorderContext::StopRecord() {
 }
 
 void MediaRecorderContext::OnAudioData(uint8_t *pData, int size) {
-    LOGCATE("MediaRecorderContext::OnAudioData pData=%p, dataSize=%d", pData, size);
-
     if (!isStart)
         return;
 
@@ -131,8 +129,6 @@ void MediaRecorderContext::OnAudioData(uint8_t *pData, int size) {
 void
 MediaRecorderContext::OnVideoFrame(void *ctx, int format, uint8_t *pBuffer, int widthsrc,
                                    int heightsrc, int size) {
-    LOGCATE("MediaRecorderContext::UpdateFrame format=%d, width=%d, height=%d, pData=%p",
-            format, widthsrc, heightsrc, pBuffer);
 
     if (!isStart)
         return;
@@ -189,10 +185,6 @@ MediaRecorderContext::OnVideoFrame(void *ctx, int format, uint8_t *pBuffer, int 
     nativeImage->pLineSize[0] = width;
     nativeImage->pLineSize[1] = width / 2;
     nativeImage->pLineSize[2] = width / 2;
-
-    LOGCATE("MediaRecorderContext::UpdateFrame2 format=%d, width=%d, height=%d, pData=%p",
-            format, widthsrc, heightsrc, pBuffer);
-
     mEnMuxer->onFrame2Encode(nativeImage);
     // free(src_yuv);
     src_yuv = nullptr;

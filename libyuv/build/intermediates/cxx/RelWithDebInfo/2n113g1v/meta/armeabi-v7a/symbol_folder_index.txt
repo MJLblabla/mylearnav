@@ -1,0 +1,1 @@
+/Users/a1/dev/mylearnav/libyuv/build/intermediates/cxx/RelWithDebInfo/2n113g1v/obj/armeabi-v7a
