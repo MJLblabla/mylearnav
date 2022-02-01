@@ -16,6 +16,7 @@ public class AudioRecorder {
     private static final int DEFAULT_SAMPLE_RATE = 44100;
     private static final int DEFAULT_CHANNEL_LAYOUT = AudioFormat.CHANNEL_IN_STEREO;
     private static final int DEFAULT_SAMPLE_FORMAT = AudioFormat.ENCODING_PCM_16BIT;
+
     private final AudioRecorderCallback mRecorderCallback;
 
     public AudioRecorder(AudioRecorderCallback callback) {
@@ -32,6 +33,7 @@ public class AudioRecorder {
             mRecorderCallback.onError("parameters are not supported by the hardware.");
             return;
         }
+
         mAudioRecord = new AudioRecord(android.media.MediaRecorder.AudioSource.MIC, DEFAULT_SAMPLE_RATE, DEFAULT_CHANNEL_LAYOUT, DEFAULT_SAMPLE_FORMAT, mMinBufferSize);
 
         start();
