@@ -5,9 +5,9 @@
 int HWAudioEncoder::start(MP4Muxer *mMuxer, RecorderParam *param) {
 
     int sampleRate = param->audioSampleRate;
-    int channelCount = param->channelLayout;
-    int bitrate = 96000;
-    baseTime = sampleRate * 16 * channelCount / 8;
+    int channelCount = param->channelCount;
+    int bitrate = 64000;
+    baseTime = sampleRate * param->sampleDeep * channelCount / 8;
     int inited_ = -1;
 
     do {
@@ -78,10 +78,7 @@ int HWAudioEncoder::dealOneFrame(MP4Muxer *mMuxer) {
     if (frame == nullptr) {
         return -1;
     }
-    if (!encodeFrame(frame->data, frame->dataSize, getTimestamp())) {
-        result = -1;
-        goto EXIT;
-    }
+    encodeFrame(frame->data, frame->dataSize, getTimestamp());
     recvFrame(mMuxer);
     EXIT:
     delete frame;

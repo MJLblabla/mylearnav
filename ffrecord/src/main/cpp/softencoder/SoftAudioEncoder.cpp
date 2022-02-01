@@ -31,17 +31,15 @@ int SoftAudioEncoder::start(AVFormatContext *formatCtx, RecorderParam *param) {
         return -1;
     }
 
-    mCodecCtx->sample_fmt = (mAdioCodec)->sample_fmts ?
-                            (mAdioCodec)->sample_fmts[0] : AV_SAMPLE_FMT_FLTP;
-    mCodecCtx->bit_rate = 96000;
-    mCodecCtx->sample_rate = m_RecorderParam.audioSampleRate;
-    mCodecCtx->channel_layout = m_RecorderParam.channelLayout;
+    mCodecCtx->sample_fmt = AV_SAMPLE_FMT_FLTP;//float, planar, 4 字节
+    mCodecCtx->sample_rate = DEFAULT_SAMPLE_RATE;
+    mCodecCtx->channel_layout = AV_CH_LAYOUT_STEREO;
     mCodecCtx->channels = av_get_channel_layout_nb_channels(mCodecCtx->channel_layout);
-    mAvStream->time_base = (AVRational) {1, mCodecCtx->sample_rate};
+    mCodecCtx->bit_rate = 96000;
 
     /* Some formats want stream headers to be separate. */
-    if (formatCtx->oformat->flags & AVFMT_GLOBALHEADER)
-        mCodecCtx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+//    if (formatCtx->oformat->flags & AVFMT_GLOBALHEADER)
+//        mCodecCtx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
     /**
      * OPEN AUDIO
      */
@@ -50,18 +48,29 @@ int SoftAudioEncoder::start(AVFormatContext *formatCtx, RecorderParam *param) {
     int ret;
     /* open it */
     ret = avcodec_open2(mCodecCtx, mAdioCodec, nullptr);
+
+
     if (ret < 0) {
         LOGCATE("SoftAudioEncoder::OpenAudio Could not open audio codec: %s", av_err2str(ret));
         return -1;
     }
-    if (mCodecCtx->codec->capabilities & AV_CODEC_CAP_VARIABLE_FRAME_SIZE)
-        nb_samples = 10000;
-    else
-        nb_samples = mCodecCtx->frame_size;
 
-    m_pFrame = AllocAudioFrame(mCodecCtx->sample_fmt, mCodecCtx->channel_layout,
-                               mCodecCtx->sample_rate, nb_samples);
-    m_pTmpFrame = av_frame_alloc();
+    m_pFrame = av_frame_alloc();
+    // 每个通道的数量
+    m_pFrame->nb_samples = mCodecCtx->frame_size;
+    m_pFrame->format = mCodecCtx->sample_fmt;
+
+    m_frameBufferSize = av_samples_get_buffer_size(nullptr, mCodecCtx->channels,
+                                                   mCodecCtx->frame_size,
+                                                   mCodecCtx->sample_fmt, 1);
+
+    LOGCATE("SingleAudioRecorder::StartRecord m_frameBufferSize=%d, nb_samples=%d",
+            m_frameBufferSize, m_pFrame->nb_samples);
+    m_pFrameBuffer = (uint8_t *) av_malloc(m_frameBufferSize);
+    avcodec_fill_audio_frame(m_pFrame, mCodecCtx->channels, mCodecCtx->sample_fmt,
+                             (const uint8_t *) m_pFrameBuffer, m_frameBufferSize, 1);
+    av_new_packet(&m_avPacket, m_frameBufferSize);
+
 
     /* copy the stream parameters to the muxer */
     ret = avcodec_parameters_from_context(mAvStream->codecpar, mCodecCtx);
@@ -78,12 +87,14 @@ int SoftAudioEncoder::start(AVFormatContext *formatCtx, RecorderParam *param) {
     }
 
     /* set options */
-    av_opt_set_int(m_pSwrCtx, "in_channel_count", mCodecCtx->channels, 0);
-    av_opt_set_int(m_pSwrCtx, "in_sample_rate", mCodecCtx->sample_rate, 0);
-    av_opt_set_sample_fmt(m_pSwrCtx, "in_sample_fmt", AV_SAMPLE_FMT_S16, 0);
-    av_opt_set_int(m_pSwrCtx, "out_channel_count", mCodecCtx->channels, 0);
+    av_opt_set_channel_layout(m_pSwrCtx, "in_channel_layout", m_RecorderParam.audioChannelLayout,
+                              0);
+    av_opt_set_channel_layout(m_pSwrCtx, "out_channel_layout", mCodecCtx->channel_layout, 0);
+    av_opt_set_int(m_pSwrCtx, "in_sample_rate", m_RecorderParam.audioSampleRate, 0);
     av_opt_set_int(m_pSwrCtx, "out_sample_rate", mCodecCtx->sample_rate, 0);
-    av_opt_set_sample_fmt(m_pSwrCtx, "out_sample_fmt", mCodecCtx->sample_fmt, 0);
+    av_opt_set_sample_fmt(m_pSwrCtx, "in_sample_fmt",
+                          AVSampleFormat(m_RecorderParam.audioSampleFormat), 0);
+    av_opt_set_sample_fmt(m_pSwrCtx, "out_sample_fmt", AV_SAMPLE_FMT_FLTP, 0);
 
     if (m_pSwrCtx) {
         LOGCATE("SoftAudioEncoder::swr_init(m_pSwrCtx)");
@@ -100,33 +111,6 @@ int SoftAudioEncoder::start(AVFormatContext *formatCtx, RecorderParam *param) {
     return 1;
 }
 
-AVFrame *SoftAudioEncoder::AllocAudioFrame(AVSampleFormat sample_fmt, uint64_t channel_layout,
-                                           int sample_rate, int nb_samples) {
-    LOGCATE("SoftAudioEncoder::AllocAudioFrame");
-    AVFrame *frame = av_frame_alloc();
-    int ret;
-
-    if (!frame) {
-        LOGCATE("SoftAudioEncoder::AllocAudioFrame Error allocating an audio frame");
-        return nullptr;
-    }
-
-    frame->format = sample_fmt;
-    frame->channel_layout = channel_layout;
-    frame->sample_rate = sample_rate;
-    frame->nb_samples = nb_samples;
-
-    if (nb_samples) {
-        ret = av_frame_get_buffer(frame, 0);
-        if (ret < 0) {
-            LOGCATE("SoftAudioEncoder::AllocAudioFrame Error allocating an audio buffer");
-            return nullptr;
-        }
-    }
-
-    return frame;
-}
-
 
 void SoftAudioEncoder::stop() {
     m_Exit = true;
@@ -141,16 +125,14 @@ void SoftAudioEncoder::clear() {
         delete pImage;
         pImage = nullptr;
     }
-    if (m_pSwsCtx) {
-        sws_freeContext(m_pSwsCtx);
-    }
+
     if (m_pSwrCtx) {
         swr_free(&m_pSwrCtx);
     }
 
-    if (m_pTmpFrame != nullptr) {
-        av_free(m_pTmpFrame);
-        m_pTmpFrame = nullptr;
+    if (m_pFrameBuffer != nullptr) {
+        av_free(m_pFrameBuffer);
+        m_pFrameBuffer = nullptr;
     }
     // delete mAdioCodec;
     mAdioCodec = nullptr;
@@ -163,109 +145,51 @@ AVRational SoftAudioEncoder::getTimeBase() {
 
 int SoftAudioEncoder::dealOneFrame() {
     LOGCATE("SoftAudioEncoder::EncodeAudioFrame");
-    int result = 0;
-    AVCodecContext *c;
-    AVPacket pkt = {0}; // data and size must be 0;
-    AVFrame *frame;
-    int ret;
-    int dst_nb_samples;
 
-    av_init_packet(&pkt);
-    c = mCodecCtx;
-
+    int result = -1;
     while (m_AudioFrameQueue.Empty() && !m_Exit) {
         usleep(10 * 1000);
     }
 
     AudioFrame *audioFrame = m_AudioFrameQueue.Pop();
-
-    frame = m_pTmpFrame;
-    if (audioFrame) {
-        frame->data[0] = audioFrame->data;
-
-        //一坨16位深bit 占用一个通道有多少样本数量
-        frame->nb_samples = audioFrame->dataSize / 4;
-        frame->pts = mNextPts;
-        mNextPts += frame->nb_samples;
+    if (!audioFrame) {
+        result = -1;
+        return result;
     }
 
-    if ((m_AudioFrameQueue.Empty() && m_Exit) || m_EncodeEnd) frame = nullptr;
-
-    if (frame) {
-        /* convert samples from native format to destination codec format, using the resampler */
-        /* compute destination number of samples */
-        dst_nb_samples = av_rescale_rnd(
-                swr_get_delay(m_pSwrCtx, c->sample_rate) + frame->nb_samples,
-                c->sample_rate, c->sample_rate, AV_ROUND_UP);
-        av_assert0(dst_nb_samples == frame->nb_samples);
-
-        /* when we pass a frame to the encoder, it may keep a reference to it
-         * internally;
-         * make sure we do not overwrite it here
-         */
-        ret = av_frame_make_writable(m_pFrame);
-        if (ret < 0) {
-            LOGCATE("SoftAudioEncoder::EncodeAudioFrame Error while av_frame_make_writable");
-            result = 1;
-            goto EXIT;
-        }
-
-        /* convert to destination format */
-        ret = swr_convert(m_pSwrCtx,
-                          m_pFrame->data, dst_nb_samples,
-                          (const uint8_t **) frame->data, frame->nb_samples);
-        LOGCATE("SoftAudioEncoder::EncodeAudioFrame dst_nb_samples=%d, frame->nb_samples=%d",
-                dst_nb_samples, frame->nb_samples);
-        if (ret < 0) {
-            LOGCATE("SoftAudioEncoder::EncodeAudioFrame Error while converting");
-            result = 1;
-            goto EXIT;
-        }
-        frame = m_pFrame;
-
-        frame->pts = av_rescale_q(m_SamplesCount, (AVRational) {1, c->sample_rate}, c->time_base);
-
-        LOGCATE("SoftAudioEncoder::EncodeAudioFrame 音频时间戳 frame->pts=%ld, m_SamplesCount=%d",
-                frame->pts,
-                m_SamplesCount);
-        m_SamplesCount += dst_nb_samples;
-
-    }
-
-    ret = avcodec_send_frame(c, frame);
-    if (ret == AVERROR_EOF) {
-        result = 1;
-        goto EXIT;
-    } else if (ret < 0) {
-        LOGCATE("SoftAudioEncoder::EncodeAudioFrame audio avcodec_send_frame fail. ret=%s",
-                av_err2str(ret));
-        result = 0;
+    AVFrame *pFrame = m_pFrame;
+    result = swr_convert(m_pSwrCtx, pFrame->data, pFrame->nb_samples,
+                         (const uint8_t **) &(audioFrame->data),
+                         audioFrame->dataSize / m_RecorderParam.channelCount /
+                         (m_RecorderParam.sampleDeep / 8));
+    if (result < 0) {
+        result = -1;
         goto EXIT;
     }
 
-    while (!ret) {
-        ret = avcodec_receive_packet(c, &pkt);
-        if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
-            result = 0;
-            goto EXIT;
-        } else if (ret < 0) {
-            LOGCATE("SoftAudioEncoder::EncodeAudioFrame audio avcodec_receive_packet fail. ret=%s",
-                    av_err2str(ret));
-            result = 0;
-            goto EXIT;
-        }
-        LOGCATE("SoftAudioEncoder::EncodeAudioFrame pkt pts=%ld, size=%d", pkt.pts, pkt.size);
+    pFrame->pts = mNextPts;
+    mNextPts += m_pFrame->nb_samples;
 
-        result = WritePacket(m_AVFormatContext, &c->time_base, mAvStream, &pkt);
-
-        if (result < 0) {
-            LOGCATE("SoftAudioEncoder::EncodeAudioFrame audio Error while writing audio frame: %s",
-                    av_err2str(ret));
-            result = 0;
-            goto EXIT;
-        }
+    result = avcodec_send_frame(mCodecCtx, pFrame);
+    if (result < 0) {
+        LOGCATE("SingleAudioRecorder::EncodeFrame avcodec_send_frame fail. ret=%d", result);
+        return result;
     }
+    while (!result) {
+        result = avcodec_receive_packet(mCodecCtx, &m_avPacket);
+        if (result == AVERROR(EAGAIN) || result == AVERROR_EOF) {
+            return 0;
+        } else if (result < 0) {
+            LOGCATE("SingleAudioRecorder::EncodeFrame avcodec_receive_packet fail. ret=%d", result);
+            return result;
+        }
+        LOGCATE("SingleAudioRecorder::EncodeFrame frame pts=%ld, size=%d", m_avPacket.pts,
+                m_avPacket.size);
+        m_avPacket.stream_index = mAvStream->index;
 
+        WritePacket(m_AVFormatContext, &mCodecCtx->time_base, mAvStream, &m_avPacket);
+        av_packet_unref(&m_avPacket);
+    }
     EXIT:
     if (audioFrame) delete audioFrame;
     return result;

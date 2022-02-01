@@ -7,10 +7,14 @@
 
 #include <ImageDef.h>
 
+extern "C" {
+#include <libavutil/samplefmt.h>
+}
+
 #define MAX_PATH   2048
 #define DELAY_THRESHOLD 100 //100ms
 
-enum EecoderType{
+enum EecoderType {
     SOFT,
     HW,
 };
@@ -43,11 +47,14 @@ struct RecorderParam {
     int frameHeight;
     int videoBitRate;
     int fps;
-
     //audio
     int audioSampleRate;
-    int channelLayout;
-    int sampleFormat;
+
+    int channelCount ;
+    int sampleDeep ;
+    int audioChannelLayout;
+    AVSampleFormat audioSampleFormat;
+
 };
 
 #define DEFAULT_SAMPLE_RATE    44100

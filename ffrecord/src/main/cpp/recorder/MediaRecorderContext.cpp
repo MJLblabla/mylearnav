@@ -7,12 +7,17 @@
 #include "ImageDef.h"
 #include "MediaRecorderContext.h"
 #include "libyuv.h"
+#include "yuvutil.h"
+
+extern "C" {
+#include <libavutil/channel_layout.h>
+}
 
 jfieldID MediaRecorderContext::s_ContextHandle = 0L;
 
 MediaRecorderContext::MediaRecorderContext() {
     mEnMuxer = new NativeMediaMuxer();
-    //mEnMuxer = new EnMuxer();
+   //  mEnMuxer = new EnMuxer();
     mEnMuxer->init();
 }
 
@@ -76,69 +81,74 @@ MediaRecorderContext *MediaRecorderContext::GetContext(JNIEnv *env, jobject inst
 int
 MediaRecorderContext::StartRecord(int recorderType, const char *outUrl, int frameWidth,
                                   int frameHeight, int videoBitRate,
-                                  int fps) {
+                                  int fps,
+                                  int audioSampleRate,
+                                  int audioChannelCount,
+                                  int audioSampleFormat) {
     isStart = true;
-    LOGCATE("MediaRecorderContext::StartRecord recorderType=%d, outUrl=%s, [w,h]=[%d,%d], videoBitRate=%ld, fps=%d",
+    LOGCATE("MediaRecorderContext::StartRecord recorderType=%d, outUrl=%s, [w,h]=[%d,%d], videoBitRate=%d, fps=%d",
             recorderType, outUrl, frameWidth, frameHeight, videoBitRate, fps);
+
     std::unique_lock<std::mutex> lock(m_mutex);
-//    switch (recorderType) {
-//        case RECORDER_TYPE_SINGLE_VIDEO:
-//            break;
-//        case RECORDER_TYPE_SINGLE_AUDIO:
-//            break;
-//        case RECORDER_TYPE_AV:
-//
-//
-//            m_pAVRecorder = new MediaRecorder(outUrl, &param);
-//            m_pAVRecorder->StartRecord();
-//            break;
-//        default:
-//            break;
+    mParam.frameWidth = frameWidth;
+    mParam.frameHeight = frameHeight;
+    mParam.videoBitRate = videoBitRate;
+    mParam.fps = fps;
+    mParam.audioSampleRate = audioSampleRate;
 
-    //   }
-    RecorderParam param = {0};
-    param.frameWidth = frameWidth;
-    param.frameHeight = frameHeight;
-    param.videoBitRate = videoBitRate;
-    param.fps = fps;
-    param.audioSampleRate = DEFAULT_SAMPLE_RATE;
-    param.channelLayout = AV_CH_LAYOUT_STEREO;
-    param.sampleFormat = AV_SAMPLE_FMT_S16;
-    mEnMuxer->start(outUrl, &param);
+    mParam.channelCount = audioChannelCount;
+    mParam.sampleDeep = audioSampleFormat;
 
+    if (audioChannelCount == 1) {
+        mParam.audioChannelLayout = AV_CH_LAYOUT_MONO;
+    } else {
+        mParam.audioChannelLayout = AV_CH_LAYOUT_STEREO;
+    }
+
+    if (mParam.sampleDeep == 16) {
+        mParam.audioSampleFormat = AV_SAMPLE_FMT_S16;
+    } else {
+        mParam.audioSampleFormat = AV_SAMPLE_FMT_U8;
+    }
+    mEnMuxer->start(outUrl, &mParam);
     return 0;
 }
+
 
 int MediaRecorderContext::StopRecord() {
     isStart = false;
     LOGCATE("MediaRecorderContext::StopRecord");
     std::unique_lock<std::mutex> lock(m_mutex);
     mEnMuxer->stop();
+    if (src_yuv) {
+        free(src_yuv);
+        src_yuv = nullptr;
+    }
+
     return 0;
 }
 
 void MediaRecorderContext::OnAudioData(uint8_t *pData, int size) {
     if (!isStart)
         return;
-
-
     AudioFrame *audioFrame = new AudioFrame(pData, size, true);
     mEnMuxer->onFrame2Encode(audioFrame);
 }
 
 void
-MediaRecorderContext::OnVideoFrame(void *ctx, int format, uint8_t *pBuffer, int widthsrc,
-                                   int heightsrc, int size) {
+MediaRecorderContext::OnVideoFrame(int format, uint8_t *pBuffer, int widthsrc,
+                                   int heightsrc, int size, int pixelStride, int rowPadding) {
 
     if (!isStart)
         return;
 
-    NativeImage *nativeImage = new NativeImage();
+    auto *nativeImage = new NativeImage();
 
-    uint8_t *src_yuv = nullptr;
     int src_y_size = widthsrc * heightsrc;
     int src_u_size = (widthsrc >> 1) * (heightsrc >> 1);
-    src_yuv = static_cast<uint8_t *>(malloc(widthsrc * heightsrc * 3 / 2));
+    if (src_yuv == nullptr) {
+        src_yuv = static_cast<uint8_t *>(malloc(widthsrc * heightsrc * 3 / 2));
+    }
     switch (format) {
         case IMAGE_FORMAT_I420:
             memcpy(src_yuv, pBuffer, size);
@@ -162,32 +172,37 @@ MediaRecorderContext::OnVideoFrame(void *ctx, int format, uint8_t *pBuffer, int 
 
             break;
         case IMAGE_FORMAT_RGBA:
-            libyuv::ABGRToI420(pBuffer, widthsrc * 4,
+            libyuv::ABGRToI420(pBuffer, widthsrc * pixelStride + rowPadding,
                                src_yuv, widthsrc,
-                               src_yuv + src_y_size, widthsrc >> 1,
-                               src_yuv + src_y_size + src_u_size, widthsrc >> 1,
+                               src_yuv + src_y_size, widthsrc / 2,
+                               src_yuv + src_y_size + src_u_size, widthsrc / 2,
                                widthsrc, heightsrc);
-            //  Jni_RgbaToI420(pBuffer,src_yuv, widthsrc, heightsrc);
             break;
     }
 
-    int width = widthsrc;
-    int height = heightsrc;
+    uint8_t *target_yuv = nullptr;
+    target_yuv = static_cast<uint8_t *>(malloc(mParam.frameWidth * mParam.frameHeight * 3 / 2));
+
+    YuvUtil_ScaleI420(src_yuv, widthsrc, heightsrc, target_yuv, mParam.frameWidth,
+                      mParam.frameHeight, 3);
+
+    int width = mParam.frameWidth;
+    int height = mParam.frameHeight;
+    int tar_y_size = width * height;
+    int tar_u_size = (width >> 1) * (height >> 1);
 
     nativeImage->width = width;
     nativeImage->height = height;
     nativeImage->format = IMAGE_FORMAT_I420;
 
-    nativeImage->ppPlane[0] = src_yuv;
-    nativeImage->ppPlane[1] = src_yuv + src_y_size;
-    nativeImage->ppPlane[2] = src_yuv + src_y_size + src_u_size;
+    nativeImage->ppPlane[0] = target_yuv;
+    nativeImage->ppPlane[1] = target_yuv + tar_y_size;
+    nativeImage->ppPlane[2] = target_yuv + tar_y_size + tar_u_size;
 
     nativeImage->pLineSize[0] = width;
     nativeImage->pLineSize[1] = width / 2;
     nativeImage->pLineSize[2] = width / 2;
     mEnMuxer->onFrame2Encode(nativeImage);
-    // free(src_yuv);
-    src_yuv = nullptr;
 
 }
 

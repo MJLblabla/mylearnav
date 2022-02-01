@@ -28,14 +28,15 @@ import android.os.Build
 import android.os.Environment
 import android.view.Surface.ROTATION_0
 import android.view.Surface.ROTATION_90
+import com.cxp.myffmpeglearn.AudioRecorder.DEFAULT_SAMPLE_RATE
 import com.cxp.myffmpeglearn.CameraUtil.*
 import com.cxp.nativelibffmpeg.MediaRecorderContext.Companion.IMAGE_FORMAT_NV12
 import com.cxp.nativelibffmpeg.MediaRecorderContext.Companion.IMAGE_FORMAT_NV21
-import com.cxp.nativelibffmpeg.MediaRecorderContext.Companion.IMAGE_FORMAT_RGBA
 
 
 class MainActivity : AppCompatActivity() {
 
+    var url: String? = ""
     private val mediaRecorderContext by lazy {
         val context = MediaRecorderContext()
         context.native_CreateContext()
@@ -49,8 +50,8 @@ class MainActivity : AppCompatActivity() {
         AudioRecorder(
             object : AudioRecorder.AudioRecorderCallback {
                 override fun onAudioData(data: ByteArray?, dataSize: Int) {
-                    Log.d("mjl", "onAudioData")
-                    mediaRecorderContext.native_OnAudioData(data)
+                    Log.d("mjl", "onAudioData ${dataSize}")
+                    mediaRecorderContext.native_OnAudioData(data!!)
                 }
 
                 override fun onError(msg: String?) {
@@ -71,11 +72,17 @@ class MainActivity : AppCompatActivity() {
         override fun analyze(image: ImageProxy) {
             var w = image.getWidth()
             var h = image.getHeight()
-           // var byteArray = CameraUtil.getDataFromImage(image, CameraUtil.COLOR_FormatNV21)
+            // var byteArray = CameraUtil.getDataFromImage(image, CameraUtil.COLOR_FormatNV21)
 
             rgbaProducer.parseImg(image)
-           // consumerBuffer.addRgbQueen(rgbaProducer.rgbaByteArray!!,rgbaProducer.mWidth,rgbaProducer.mHeight,rgbaProducer.pixelStride,rgbaProducer.rowPadding)
-            mediaRecorderContext.native_OnVideoData(IMAGE_FORMAT_RGBA, rgbaProducer.rgbaByteArray, w, h);
+            // consumerBuffer.addRgbQueen(rgbaProducer.rgbaByteArray!!,rgbaProducer.mWidth,rgbaProducer.mHeight,rgbaProducer.pixelStride,rgbaProducer.rowPadding)
+            mediaRecorderContext.native_OnVideoDataRgba(
+                rgbaProducer.rgbaByteArray!!,
+                w,
+                h,
+                rgbaProducer.pixelStride,
+                rgbaProducer.rowPadding
+            );
             Log.d("mjl", "onImageProxy finish ${w}  ${h} ${image.imageInfo.rotationDegrees}")
 
             image.close()
@@ -199,8 +206,8 @@ class MainActivity : AppCompatActivity() {
         val frameWidth: Int = 640
         val frameHeight: Int = 480
         val fps = 25
-        val bitRate = (frameWidth * frameHeight * fps * 0.3).toLong()
-        var url: String? = ""
+        val bitRate = (frameWidth * frameHeight * fps * 0.3).toInt()
+
         url = if (Build.VERSION.SDK_INT > 29) {
             cacheDir.absolutePath
         } else {
@@ -213,11 +220,14 @@ class MainActivity : AppCompatActivity() {
         }
         mediaRecorderContext.native_StartRecord(
             RECORDER_TYPE_AV,
-            url,
+            url!!,
             frameWidth,
             frameHeight,
             bitRate,
-            fps
+            fps,
+            DEFAULT_SAMPLE_RATE,
+            2,
+            16
         )
     }
 

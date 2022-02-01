@@ -13,14 +13,14 @@ class SoftAudioEncoder : public AudioEncoder {
     AVCodecContext *mCodecCtx = nullptr;
     AVCodec *mAdioCodec = nullptr;
 
-    int m_SamplesCount = 0;
+    int m_frameBufferSize;
+    uint8_t *m_pFrameBuffer = nullptr;
+    AVPacket m_avPacket;
+
     AVFrame *m_pFrame = nullptr;
-    AVFrame *m_pTmpFrame = nullptr;
-    SwsContext *m_pSwsCtx = nullptr;
     SwrContext *m_pSwrCtx = nullptr;
 
-    AVFrame *AllocAudioFrame(AVSampleFormat sample_fmt, uint64_t channel_layout, int sample_rate,
-                             int nb_samples);
+
 
 protected:
 

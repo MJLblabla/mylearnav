@@ -10,22 +10,22 @@ void EnMuxer::init() {
 }
 
 int EnMuxer::onFrame2Encode(AudioFrame *inputFrame) {
-    if (m_EncoderState != STATE_DECODING || mAudioEncoder->getQueueSize() > 5) {
-        delete inputFrame;
-        inputFrame = nullptr;
-        return 0;
-    }
+//    if (m_EncoderState != STATE_DECODING || mAudioEncoder->getQueueSize() > 5) {
+//        delete inputFrame;
+//        inputFrame = nullptr;
+//        return 0;
+//    }
     mAudioEncoder->pushImg(inputFrame);
     return 1;
 }
 
 int EnMuxer::onFrame2Encode(VideoFrame *inputFrame) {
-    if (m_EncoderState != STATE_DECODING || mVideoEncoder->getQueueSize() > 5) {
-        NativeImageUtil::FreeNativeImage(inputFrame);
-        delete inputFrame;
-        inputFrame = nullptr;
-        return 0;
-    }
+//    if (m_EncoderState != STATE_DECODING || mVideoEncoder->getQueueSize() > 5) {
+//        NativeImageUtil::FreeNativeImage(inputFrame);
+//        delete inputFrame;
+//        inputFrame = nullptr;
+//        return 0;
+//    }
     mVideoEncoder->pushImg(inputFrame);
     return 1;
 }
@@ -45,7 +45,6 @@ int EnMuxer::start(const char *url, RecorderParam *param) {
         result = -1;
         return result;
     }
-
 
     mVideoEncoder->start(m_AVFormatContext, param);
     mAudioEncoder->start(m_AVFormatContext, param);
