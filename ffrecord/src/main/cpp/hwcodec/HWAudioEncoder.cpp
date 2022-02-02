@@ -28,6 +28,7 @@ int HWAudioEncoder::start(MP4Muxer *mMuxer, RecorderParam *param) {
             LOGCATE("%s %d HWAudioEncoder fail (%d)", __FUNCTION__, __LINE__, status);
             break;
         }
+
         LOGCATE("%s %d HWAudioEncoder status: %d %s", __FUNCTION__, __LINE__, status,
                 AMediaFormat_toString(media_format_));
 
@@ -35,6 +36,7 @@ int HWAudioEncoder::start(MP4Muxer *mMuxer, RecorderParam *param) {
             LOGCATE("%s %d HWAudioEncoder fail (%d)", __FUNCTION__, __LINE__, status);
             break;
         }
+        LOGCATE("%s %d HWAudioEncoder  start (%d)", __FUNCTION__, __LINE__, status);
         inited_ = 1;
         m_Exit = false;
     } while (false);

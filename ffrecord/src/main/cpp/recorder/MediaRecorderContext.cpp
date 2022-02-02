@@ -16,8 +16,8 @@ extern "C" {
 jfieldID MediaRecorderContext::s_ContextHandle = 0L;
 
 MediaRecorderContext::MediaRecorderContext() {
-    mEnMuxer = new NativeMediaMuxer();
-   //  mEnMuxer = new EnMuxer();
+   // mEnMuxer = new NativeMediaMuxer();
+     mEnMuxer = new EnMuxer();
     mEnMuxer->init();
 }
 

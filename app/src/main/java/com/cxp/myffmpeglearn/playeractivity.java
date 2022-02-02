@@ -41,7 +41,7 @@ public class playeractivity extends AppCompatActivity implements FFPlayEngine.Ev
     private FFPlayEngine mMediaPlayer = null;
     private SeekBar mSeekBar = null;
     private boolean mIsTouch = false;
-    private String mVideoPath = Environment.getExternalStorageDirectory().getAbsolutePath() + "/byteflow/one_piece.mp4";
+    private String mVideoPath = "http://clips.vorwaerts-gmbh.de/big_buck_bunny.mp4";//Environment.getExternalStorageDirectory().getAbsolutePath() + "/byteflow/one_piece.mp4";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
