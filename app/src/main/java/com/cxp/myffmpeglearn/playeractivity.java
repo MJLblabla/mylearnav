@@ -13,7 +13,6 @@ import androidx.core.app.ActivityCompat;
 import android.Manifest;
 import android.content.pm.PackageManager;
 import android.opengl.GLSurfaceView;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.util.Log;
@@ -21,13 +20,12 @@ import android.view.View;
 import android.widget.SeekBar;
 import android.widget.Toast;
 
+import com.hapi.mediapicker.MediaParams;
+import com.hapi.mediapicker.VideoPickCallBack;
+import com.hapi.mediapicker.VideoPickHelper;
 import com.mjl.ffplay.FFPlayEngine;
 import com.mjl.ffplay.MyGLRender;
 import com.mjl.ffplay.MyGLSurfaceView;
-import com.mjl.ffplay.OpenGLVideoRender;
-
-import javax.microedition.khronos.egl.EGLConfig;
-import javax.microedition.khronos.opengles.GL10;
 
 public class playeractivity extends AppCompatActivity implements FFPlayEngine.EventCallback {
 
@@ -41,7 +39,8 @@ public class playeractivity extends AppCompatActivity implements FFPlayEngine.Ev
     private FFPlayEngine mMediaPlayer = null;
     private SeekBar mSeekBar = null;
     private boolean mIsTouch = false;
-    private String mVideoPath = "http://clips.vorwaerts-gmbh.de/big_buck_bunny.mp4";//Environment.getExternalStorageDirectory().getAbsolutePath() + "/byteflow/one_piece.mp4";
+    VideoPickHelper mVideoPickHelper = new VideoPickHelper(this);
+    private String mVideoPath = Environment.getExternalStorageDirectory().getAbsolutePath() + "/byteflow/one_piece.mp4";//"http://clips.vorwaerts-gmbh.de/big_buck_bunny.mp4";//Environment.getExternalStorageDirectory().getAbsolutePath() + "/byteflow/one_piece.mp4";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -80,7 +79,7 @@ public class playeractivity extends AppCompatActivity implements FFPlayEngine.Ev
         mMediaPlayer = new FFPlayEngine();
 
         mMediaPlayer.addEventCallback(this);
-        mMediaPlayer.setUrl();
+        mMediaPlayer.init();
         mMediaPlayer.setVideoPlayerRender(render);
         if (!hasPermissionsGranted(REQUEST_PERMISSIONS)) {
             ActivityCompat.requestPermissions(this, REQUEST_PERMISSIONS, PERMISSION_REQUEST_CODE);
@@ -92,7 +91,17 @@ public class playeractivity extends AppCompatActivity implements FFPlayEngine.Ev
         findViewById(R.id.btStart).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                mMediaPlayer.play(mVideoPath);
+                mVideoPickHelper.show(new VideoPickCallBack() {
+                    @Override
+                    public void onSuccess(@NonNull MediaParams mediaParams) {
+                        mMediaPlayer.play(mediaParams.getPath());
+                    }
+
+                    @Override
+                    public void onPermissionNotGet(@NonNull String s) {
+
+                    }
+                });
             }
         });
 

@@ -1,6 +1,3 @@
-//
-// Created by 公众号：字节流动 on 2019/1/14.
-//
 
 #ifndef BYTEFLOW_LOGUTIL_H
 #define BYTEFLOW_LOGUTIL_H
@@ -8,12 +5,13 @@
 #include<android/log.h>
 #include <sys/time.h>
 #include <time.h>
-#define  LOG_TAG "ByteFlow"
 
-#define  LOGCATE(...)  __android_log_print(ANDROID_LOG_ERROR,LOG_TAG,__VA_ARGS__)
-#define  LOGCATV(...)  __android_log_print(ANDROID_LOG_VERBOSE,LOG_TAG,__VA_ARGS__)
-#define  LOGCATD(...)  __android_log_print(ANDROID_LOG_DEBUG,LOG_TAG,__VA_ARGS__)
-#define  LOGCATI(...)  __android_log_print(ANDROID_LOG_INFO,LOG_TAG,__VA_ARGS__)
+#define  LOG_TAG "qiniurecorder"
+#define LOG_ABLE  1
+#define  LOGCATE(...) {  if(LOG_ABLE){ __android_log_print(ANDROID_LOG_ERROR,LOG_TAG,__VA_ARGS__); }}
+#define  LOGCATV(...) {  if(LOG_ABLE){ __android_log_print(ANDROID_LOG_VERBOSE,LOG_TAG,__VA_ARGS__);}}
+#define  LOGCATD(...) { if(LOG_ABLE){ __android_log_print(ANDROID_LOG_DEBUG,LOG_TAG,__VA_ARGS__);}}
+#define  LOGCATI(...) { if(LOG_ABLE){ __android_log_print(ANDROID_LOG_INFO,LOG_TAG,__VA_ARGS__);}}
 
 #define ByteFlowPrintE LOGCATE
 #define ByteFlowPrintV LOGCATV
@@ -36,15 +34,14 @@
     long long t1 = GetSysCurrentTime(); \
     LOGCATE("%s func cost time %ldms", FUN, (long)(t1-t0));}
 
-static long long GetSysCurrentTime()
-{
-	struct timeval time;
-	gettimeofday(&time, NULL);
-	long long curTime = ((long long)(time.tv_sec))*1000+time.tv_usec/1000;
-	return curTime;
+static long long GetSysCurrentTime() {
+    struct timeval time;
+    gettimeofday(&time, NULL);
+    long long curTime = ((long long) (time.tv_sec)) * 1000 + time.tv_usec / 1000;
+    return curTime;
 }
-static long long GetSysCurrentTimeNS()
-{
+
+static long long GetSysCurrentTimeNS() {
     struct timespec now;
     clock_gettime(CLOCK_MONOTONIC, &now);
     return now.tv_sec * 1000000000LL + now.tv_nsec;

@@ -11,8 +11,7 @@ class IEnMuxer {
 protected:
     //编码码器状态
     volatile int m_EncoderState = STATE_UNKNOWN;
-    //编码器线程
-    thread *encoderThread = nullptr;
+
 
     char m_OutUrl[1024] = {0};
     volatile bool m_Exit = false;

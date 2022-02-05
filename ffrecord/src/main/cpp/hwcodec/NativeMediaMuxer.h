@@ -12,9 +12,15 @@ protected:
     MP4Muxer *mp4Muxer = nullptr;
     HWVideoEncoder *mVideoEncoder = nullptr;
     HWAudioEncoder *mAudioEncoder = nullptr;
+    //编码器线程
+    thread *videoEncoderThread = nullptr;
+    //编码器线程
+    thread *audioEncoderThread = nullptr;
 
-    static void startMediaEncodeThread(NativeMediaMuxer *recorder);
-    void loopEncoder();
+    static void startVideoMediaEncodeThread(NativeMediaMuxer *recorder);
+    static void startAudioMediaEncodeThread(NativeMediaMuxer *recorder);
+    void loopVideoEncoder();
+    void loopAudioEncoder();
 
 public:
     int start(const char *url, RecorderParam *param);

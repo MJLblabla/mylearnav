@@ -23,6 +23,8 @@ protected:
     size_t mTrackIndex = -1;
     volatile bool m_Exit = false;
     int64_t baseTime = 0;
+    long startTime = 0;
+    long position = 0;
 
 public:
 

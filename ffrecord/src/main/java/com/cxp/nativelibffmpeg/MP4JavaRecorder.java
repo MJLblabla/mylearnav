@@ -1,6 +1,5 @@
 package com.cxp.nativelibffmpeg;
 
-import android.media.MediaCodec;
 import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -26,17 +25,17 @@ public class MP4JavaRecorder implements ImageListener, AudioFrameListener {
     //mp4编码
     private Mp4Muxer mp4Muxer;
     private String filePath = "";
-    private RecordParams recordParams;
+    private final RecordParams recordParams;
     //aac编码
     private AACEncoder audioEncode;
-    private volatile boolean isStop = false;
-    //异步编码线程
-    private HandlerThread mVideoDecoderHandlerThread = new HandlerThread("VideoDecoder");
+    public volatile boolean isStart = false;
     private Handler mVideoDecoderHandler = null;
 
     @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR2)
     public MP4JavaRecorder(RecordParams recordParams) {
         this.recordParams = recordParams;
+        //异步编码线程
+        HandlerThread mVideoDecoderHandlerThread = new HandlerThread("VideoDecoder");
         mVideoDecoderHandlerThread.start();
         mVideoDecoderHandler = new Handler(mVideoDecoderHandlerThread.getLooper());
         createMediaRecorder();
@@ -71,13 +70,14 @@ public class MP4JavaRecorder implements ImageListener, AudioFrameListener {
 
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     public void start() {
+        isStart = true;
         mAvEncoder.start();
         audioEncode.start();
     }
 
     @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR2)
     public void stop() {
-        isStop = true;
+        isStart = false;
         if (audioEncode != null) {
             audioEncode.stop();
             audioEncode = null;
@@ -96,7 +96,7 @@ public class MP4JavaRecorder implements ImageListener, AudioFrameListener {
                              int bitsPerSample,
                              int sampleRate,
                              int numberOfChannels) {
-        if (isStop) {
+        if (!isStart) {
             return;
         }
         if (audioEncode != null) {
@@ -108,7 +108,7 @@ public class MP4JavaRecorder implements ImageListener, AudioFrameListener {
     @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     @Override
     public void onImageAvailable(byte[] rgbaBuffer, final int width, final int height, int pixelStride, int rowPadding) {
-        if (isStop) {
+        if (!isStart) {
             return;
         }
         if (mAvEncoder == null) {

@@ -27,16 +27,21 @@ int NativeMediaMuxer::start(const char *url, RecorderParam *param) {
     }
 
     m_EncoderState = STATE_DECODING;
-    if (encoderThread == nullptr)
-        encoderThread = new thread(startMediaEncodeThread, this);
+    if (videoEncoderThread == nullptr)
+        videoEncoderThread = new thread(startVideoMediaEncodeThread, this);
+    if (audioEncoderThread == nullptr)
+        audioEncoderThread = new thread(startAudioMediaEncodeThread, this);
     return result;
 }
 
-void NativeMediaMuxer::startMediaEncodeThread(NativeMediaMuxer *recorder) {
-    recorder->loopEncoder();
+void NativeMediaMuxer::startVideoMediaEncodeThread(NativeMediaMuxer *recorder) {
+    recorder->loopVideoEncoder();
+}
+void NativeMediaMuxer::startAudioMediaEncodeThread(NativeMediaMuxer *recorder) {
+    recorder->loopAudioEncoder();
 }
 
-void NativeMediaMuxer::loopEncoder() {
+void NativeMediaMuxer::loopVideoEncoder() {
     while (!m_Exit) {
         while (m_EncoderState == STATE_PAUSE) {
             std::unique_lock<std::mutex> lock(m_Mutex);
@@ -48,18 +53,22 @@ void NativeMediaMuxer::loopEncoder() {
             LOGCATE("DeMuxer::DecodingLoop  stop break thread");
             break;
         }
-
-        double videoTimestamp = mVideoEncoder->getTimestamp();
-        double audioTimestamp = mAudioEncoder->getTimestamp();
-
-        LOGCATE("MediaRecorder::loopEncoder [videoTimestamp, audioTimestamp]=[%lf, %lf]",
-                videoTimestamp, audioTimestamp);
-
-        if (audioTimestamp >= videoTimestamp) {
-            mVideoEncoder->dealOneFrame(mp4Muxer);
-        } else {
-            mAudioEncoder->dealOneFrame(mp4Muxer);
+        mVideoEncoder->dealOneFrame(mp4Muxer);
+    }
+}
+void NativeMediaMuxer::loopAudioEncoder() {
+    while (!m_Exit) {
+        while (m_EncoderState == STATE_PAUSE) {
+            std::unique_lock<std::mutex> lock(m_Mutex);
+            LOGCATE("DeMuxer::DecodingLoop waiting, m_MediaType");
+            m_Cond.wait_for(lock, std::chrono::milliseconds(10));
         }
+
+        if (m_EncoderState == STATE_STOP) {
+            LOGCATE("DeMuxer::DecodingLoop  stop break thread");
+            break;
+        }
+        mAudioEncoder->dealOneFrame(mp4Muxer);
     }
 }
 
@@ -81,11 +90,17 @@ void NativeMediaMuxer::stop() {
     mVideoEncoder->stop();
     mAudioEncoder->stop();
     LOGCATE("MediaRecorder::StopRecord  encoderThread->join() b");
-    if (encoderThread != nullptr) {
-        encoderThread->join();
-        delete encoderThread;
-        encoderThread = nullptr;
+    if (videoEncoderThread != nullptr) {
+        videoEncoderThread->join();
+        delete videoEncoderThread;
+        videoEncoderThread = nullptr;
     }
+    if (audioEncoderThread != nullptr) {
+        audioEncoderThread->join();
+        delete audioEncoderThread;
+        audioEncoderThread = nullptr;
+    }
+
     mVideoEncoder->flush(mp4Muxer);
     mAudioEncoder->flush(mp4Muxer);
     LOGCATE("MediaRecorder::StopRecord  encoderThread->join() f");

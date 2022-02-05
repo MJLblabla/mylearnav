@@ -3,6 +3,7 @@
 #include "libyuv.h"
 #include <cstring>
 #include <ctime>
+#include <libyuv/rotate.h>
 
 /* Header for class com_cxp_nativelibffmpeg_YuvUtil */
 
@@ -16,11 +17,11 @@ extern "C" {
  * Method:    NV21ToI420
  * Signature: ([B[BII)I
  */
-
+using namespace libyuv;
 
 extern "C" jint
-Java_com_cxp_nativelibffmpeg_YuvUtil_CropI420(JNIEnv *env, jclass clazz, jbyteArray src, jint width,
-                                              jint height, jbyteArray dst, jint dst_width,
+Java_com_cxp_nativelibffmpeg_YuvUtil_CropI420(JNIEnv *env, jclass clazz, jbyteArray src_, jint width,
+                                              jint height, jbyteArray dst_, jint dst_width,
                                               jint dst_height, jint left, jint top) {
     //裁剪的区域大小不对
     if (left + dst_width > width || top + dst_height > height) {
@@ -58,8 +59,8 @@ Java_com_cxp_nativelibffmpeg_YuvUtil_CropI420(JNIEnv *env, jclass clazz, jbyteAr
 }
 
 extern "C" jint
-Java_com_cxp_nativelibffmpeg_YuvUtil_I420ToNV21(JNIEnv *env, jclass clazz, jbyteArray i420_src,
-                                                jbyteArray nv21_src, jint width, jint height) {
+Java_com_cxp_nativelibffmpeg_YuvUtil_I420ToNV21(JNIEnv *env, jclass clazz, jbyteArray i420Src,
+                                                jbyteArray nv21Src, jint width, jint height) {
     jbyte *src_i420_data = env->GetByteArrayElements(i420Src, NULL);
     jbyte *src_nv21_data = env->GetByteArrayElements(nv21Src, NULL);
 
@@ -87,8 +88,8 @@ Java_com_cxp_nativelibffmpeg_YuvUtil_I420ToNV21(JNIEnv *env, jclass clazz, jbyte
 }
 
 extern "C" jint
-Java_com_cxp_nativelibffmpeg_YuvUtil_MirrorI420(JNIEnv *env, jclass clazz, jbyteArray src,
-                                                jint width, jint height, jbyteArray dst) {
+Java_com_cxp_nativelibffmpeg_YuvUtil_MirrorI420(JNIEnv *env, jclass clazz, jbyteArray src_,
+                                                jint width, jint height, jbyteArray dst_) {
     jbyte *src_data = env->GetByteArrayElements(src_, NULL);
     jbyte *dst_data = env->GetByteArrayElements(dst_, NULL);
 
@@ -116,8 +117,8 @@ Java_com_cxp_nativelibffmpeg_YuvUtil_MirrorI420(JNIEnv *env, jclass clazz, jbyte
 }
 
 extern "C" jint
-Java_com_cxp_nativelibffmpeg_YuvUtil_NV21ToI420(JNIEnv *env, jclass clazz, jbyteArray input,
-                                                jbyteArray output, jint width, jint height) {
+Java_com_cxp_nativelibffmpeg_YuvUtil_NV21ToI420(JNIEnv *env, jclass clazz, jbyteArray input_,
+                                                jbyteArray output_, jint width, jint height) {
     jbyte *srcData = env->GetByteArrayElements(input_, NULL);
     jbyte *dstData = env->GetByteArrayElements(output_, NULL);
     jint src_y_size = width * height;
@@ -143,8 +144,8 @@ Java_com_cxp_nativelibffmpeg_YuvUtil_NV21ToI420(JNIEnv *env, jclass clazz, jbyte
 }
 
 extern "C" jint
-Java_com_cxp_nativelibffmpeg_YuvUtil_RotateI420(JNIEnv *env, jclass clazz, jbyteArray input,
-                                                jbyteArray output, jint width, jint height,
+Java_com_cxp_nativelibffmpeg_YuvUtil_RotateI420(JNIEnv *env, jclass clazz, jbyteArray input_,
+                                                jbyteArray output_, jint width, jint height,
                                                 jint rotation) {
     jbyte *srcData = env->GetByteArrayElements(input_, NULL);
     jbyte *dstData = env->GetByteArrayElements(output_, NULL);
@@ -173,8 +174,8 @@ Java_com_cxp_nativelibffmpeg_YuvUtil_RotateI420(JNIEnv *env, jclass clazz, jbyte
 }
 
 extern "C" jint
-Java_com_cxp_nativelibffmpeg_YuvUtil_ScaleI420(JNIEnv *env, jclass clazz, jbyteArray src,
-                                               jint width, jint height, jbyteArray dst,
+Java_com_cxp_nativelibffmpeg_YuvUtil_ScaleI420(JNIEnv *env, jclass clazz, jbyteArray src_,
+                                               jint width, jint height, jbyteArray dst_,
                                                jint dst_width, jint dst_height, jint mode) {
     jbyte *srcData = env->GetByteArrayElements(src_, NULL);
     jbyte *dst_data = env->GetByteArrayElements(dst_, NULL);

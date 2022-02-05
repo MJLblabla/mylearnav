@@ -1,9 +1,7 @@
 package com.cxp.nativelibffmpeg;
 
 import android.os.Build;
-
 import androidx.annotation.RequiresApi;
-
 import com.cxp.nativelibffmpeg.service.AudioFrameListener;
 import com.cxp.nativelibffmpeg.service.ImageListener;
 import com.cxp.nativelibffmpeg.service.RecordParams;
@@ -18,6 +16,7 @@ public class VideoNdkRecorder implements ImageListener, AudioFrameListener {
     private final RGBAConsumerBuffer rgbaConsumerBuffer = new RGBAConsumerBuffer();
     private MediaRecorderContext mediaRecorderContext = null;
     private final RecordParams recordParams;
+    public volatile boolean isStart = false;
     public VideoNdkRecorder(RecordParams recordParams) {
         mediaRecorderContext = new MediaRecorderContext();
         mediaRecorderContext.native_CreateContext();
@@ -49,6 +48,7 @@ public class VideoNdkRecorder implements ImageListener, AudioFrameListener {
     }
 
     public void start() {
+        isStart = true;
         mediaRecorderContext.native_StartRecord(MediaRecorderContext.Companion.getRECORDER_TYPE_AV(),
                 recordParams.filePath,
                 recordParams.width,
@@ -61,6 +61,7 @@ public class VideoNdkRecorder implements ImageListener, AudioFrameListener {
 
     @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN_MR2)
     public void stop() {
+        isStart = false;
         mediaRecorderContext.native_StopRecord();
         mediaRecorderContext.native_DestroyContext();
     }

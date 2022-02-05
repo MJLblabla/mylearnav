@@ -11,13 +11,13 @@
 #include "../recorder/IEnMuxer.h"
 //#include "HWVideoEncoder.h"
 
-class EnMuxer :public IEnMuxer{
+class EnMuxer : public IEnMuxer {
 
 private:
     //封装格式上下文
     AVFormatContext *m_AVFormatContext = nullptr;
-
-
+    //编码器线程
+    thread *encoderThread = nullptr;
     VideoEncoder *mVideoEncoder;
     AudioEncoder *mAudioEncoder;
 

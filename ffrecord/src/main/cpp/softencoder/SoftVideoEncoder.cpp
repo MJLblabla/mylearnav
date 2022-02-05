@@ -38,9 +38,9 @@ int SoftVideoEncoder::start(AVFormatContext *formatCtx, RecorderParam *param) {
      * of which frame timestamps are represented. For fixed-fps content,
      * timebase should be 1/framerate and timestamp increments should be
      * identical to 1. */
-    mAvStream->time_base = (AVRational) {1, m_RecorderParam.fps};
+    //mAvStream->time_base = (AVRational) {1, m_RecorderParam.fps};
 
-    mCodecCtx->time_base = mAvStream->time_base;
+    mCodecCtx->time_base =(AVRational) {1, m_RecorderParam.fps};
 
     mCodecCtx->gop_size = 12; /* emit one intra frame every twelve frames at most */
     mCodecCtx->pix_fmt = AV_PIX_FMT_YUV420P;
@@ -186,7 +186,7 @@ int SoftVideoEncoder::dealOneFrame() {
         goto EXIT;
     }
 
-    while (!ret) {
+    while (!ret && !m_Exit) {
         ret = avcodec_receive_packet(c, m_Packet);
         if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
             result = 0;

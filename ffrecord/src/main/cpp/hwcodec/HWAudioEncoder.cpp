@@ -8,6 +8,7 @@ int HWAudioEncoder::start(MP4Muxer *mMuxer, RecorderParam *param) {
     int channelCount = param->channelCount;
     int bitrate = 64000;
     baseTime = sampleRate * param->sampleDeep * channelCount / 8;
+    startTime = GetSysCurrentTimeNS();
     int inited_ = -1;
 
     do {
@@ -80,7 +81,10 @@ int HWAudioEncoder::dealOneFrame(MP4Muxer *mMuxer) {
     if (frame == nullptr) {
         return -1;
     }
+
+
     encodeFrame(frame->data, frame->dataSize, getTimestamp());
+
     recvFrame(mMuxer);
     EXIT:
     delete frame;
@@ -145,6 +149,10 @@ void HWAudioEncoder::recvFrame(MP4Muxer *mMuxer) {
                 info.size = 0;
             }
             size_t dataSize = info.size;
+
+            LOGCATE("nalu, AMediaCodec_dequeueOutputBuffer audio type: %d size: %u flags: %u offset: %u pts: %ld",
+                    1, info.size, info.flags, info.offset, info.presentationTimeUs);
+
             mMuxer->writeSampleData(mTrackIndex, encodeData, &info);
             AMediaCodec_releaseOutputBuffer(media_codec_, status, false);
             if ((info.flags & AMEDIACODEC_BUFFER_FLAG_END_OF_STREAM) != 0) {

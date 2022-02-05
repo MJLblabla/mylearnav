@@ -6,6 +6,7 @@
 #define TAG    "YuvJni"
 #define LOGD(...)  __android_log_print(ANDROID_LOG_DEBUG,TAG,__VA_ARGS__)
 
+
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_libyuv_util_YuvUtil_yuvCompress(JNIEnv *env, jclass jcls,

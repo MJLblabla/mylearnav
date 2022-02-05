@@ -8,6 +8,8 @@ int HWVideoEncoder::start(MP4Muxer *mMuxer, RecorderParam *param) {
     int bitrate = param->videoBitRate;
     baseTime = 1000000L / param->fps;
     int inited_ = -1;
+    inFrame_idx_ = 0;
+    outFrame_idx_ = 0;
 
     do {
         const char *mine = "video/avc";
@@ -68,7 +70,7 @@ void HWVideoEncoder::clear() {
 }
 
 long HWVideoEncoder::getTimestamp() {
-    return frame_idx_ * baseTime;
+    return outFrame_idx_ * baseTime;
 }
 
 int HWVideoEncoder::dealOneFrame(MP4Muxer *mMuxer) {
@@ -85,9 +87,9 @@ int HWVideoEncoder::dealOneFrame(MP4Muxer *mMuxer) {
         return -1;
     }
     long current = GetSysCurrentTimeNS();
-
+    long pts = (current - startTime) / 1000;
     if (!encodeFrame(videoFrame->ppPlane[0], videoFrame->width * videoFrame->height * 3 / 2,
-                     current -startTime)) {
+                     pts)) {
         result = -1;
         goto EXIT;
     }
@@ -126,12 +128,14 @@ bool HWVideoEncoder::encodeFrame(void *data, int size, int64_t pts) {
     memcpy(buf, data, size);
 
 //    uint32_t flags = 0;
-//    if (frame_idx_ % 5 == 0) {
+//    if (outFrame_idx_ % 5 == 0) {
 //        flags |= AMEDIACODEC_CONFIGURE_FLAG_ENCODE;
-//    } else if (frame_idx_ % 10 == 0) {
+//    } else if (outFrame_idx_ % 10 == 0) {
 //        flags |= AMEDIACODEC_BUFFER_FLAG_CODEC_CONFIG;
 //    }
     media_status_t status = AMediaCodec_queueInputBuffer(media_codec_, bufidx, 0, size, pts, 0);
+    inFrame_idx_++;
+    LOGCATE("VideoFrame index  inFrame_idx_ (%ld)", inFrame_idx_);
     LOGCATE("%s %d AMediaCodec_queueInputBuffer status (%d)", __FUNCTION__, __LINE__, status);
     return true;
 }
@@ -181,16 +185,17 @@ void HWVideoEncoder::recvFrame(MP4Muxer *mMuxer) {
                                                               NULL/* out_size */);
             int type = encodeData[4] & 0x1f;
 
-            LOGCATE("nalu, AMediaCodec_dequeueOutputBuffer type: %d size: %u flags: %u offset: %u pts: %ld",
-                    type, info.size, info.flags, info.offset, info.presentationTimeUs);
-
             if ((info.flags & AMEDIACODEC_BUFFER_FLAG_CODEC_CONFIG) != 0) {
                 LOGCATE("ignoring AMEDIACODEC_BUFFER_FLAG_CODEC_CONFIG");
                 info.size = 0;
             }
             size_t dataSize = info.size;
-            ++frame_idx_;
-            info.presentationTimeUs = getTimestamp();
+            ++outFrame_idx_;
+            LOGCATE("VideoFrame index  outFrame_idx_ (%ld)", outFrame_idx_);
+            LOGCATE("nalu, AMediaCodec_dequeueOutputBuffer video type: %d size: %u flags: %u offset: %u pts: %ld",
+                    type, info.size, info.flags, info.offset, info.presentationTimeUs);
+
+
             mMuxer->writeSampleData(mTrackIndex, encodeData, &info);
             AMediaCodec_releaseOutputBuffer(media_codec_, status, false);
             if ((info.flags & AMEDIACODEC_BUFFER_FLAG_END_OF_STREAM) != 0) {

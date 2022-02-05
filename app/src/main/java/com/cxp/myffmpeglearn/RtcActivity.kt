@@ -1,6 +1,7 @@
 package com.cxp.myffmpeglearn
 
 import android.Manifest
+import android.annotation.SuppressLint
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
@@ -11,7 +12,7 @@ import com.chad.library.adapter.base.BaseViewHolder
 import com.codebouy.mediasouprtc.BLARtcEngine
 import com.codebouy.mediasouprtc.RtcEngineEventLister
 import com.codebouy.mediasouprtc.utils.RandomString
-import com.tbruyelle.rxpermissions3.RxPermissions
+import com.tbruyelle.rxpermissions2.RxPermissions
 import kotlinx.android.synthetic.main.activity_rtc.*
 import kotlinx.android.synthetic.main.item_remote.view.*
 import org.json.JSONException
@@ -129,6 +130,7 @@ class RtcActivity : AppCompatActivity() {
 //            }
 //        }
 
+    @SuppressLint("CheckResult")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_rtc)

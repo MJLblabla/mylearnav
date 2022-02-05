@@ -60,7 +60,7 @@ Java_com_mjl_ffplay_FFPlayEngine_nativeSeekToPosition(JNIEnv *env, jobject thiz,
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_mjl_ffplay_FFPlayEngine_nativeSetUpUrl(JNIEnv *env, jobject thiz, jlong native_engine_ctr) {
+Java_com_mjl_ffplay_FFPlayEngine_nativeInit(JNIEnv *env, jobject thiz, jlong native_engine_ctr) {
     FFMediaPlayer *ffMediaPlayer = reinterpret_cast<FFMediaPlayer *>(native_engine_ctr);
     ffMediaPlayer->Init(env, thiz);
 }

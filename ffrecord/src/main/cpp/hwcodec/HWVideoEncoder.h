@@ -8,9 +8,8 @@ class HWVideoEncoder : public HWEncoder {
 private:  //视频帧队列
     ThreadSafeQueue<VideoFrame *>
             mVideoFrameQueue;
-    volatile int64_t frame_idx_ = 0;
-    long startTime = 0;
-
+    volatile int64_t outFrame_idx_ = 0;
+    volatile int64_t inFrame_idx_ = 0;
     bool encodeFrame(void *data, int size, int64_t pts);
 
     void recvFrame(MP4Muxer *mMuxer);

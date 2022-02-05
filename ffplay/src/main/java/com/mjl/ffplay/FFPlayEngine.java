@@ -25,8 +25,8 @@ public class FFPlayEngine {
         nativeDestroy(mNativeEngineCtr);
     }
 
-    public void setUrl() {
-        nativeSetUpUrl(mNativeEngineCtr);
+    public void init() {
+        nativeInit(mNativeEngineCtr);
     }
 
     public void setVideoPlayerRender(OpenGLVideoRender render) {
@@ -72,7 +72,7 @@ public class FFPlayEngine {
 
     public native  void nativeDestroy(long nativeEngineCtr);
 
-    public native  void nativeSetUpUrl(long nativeEngineCtr);
+    public native  void nativeInit(long nativeEngineCtr);
 
     public native  void nativeSetVideoPlayerRender(long nativeEngineCtr, long render);
 
