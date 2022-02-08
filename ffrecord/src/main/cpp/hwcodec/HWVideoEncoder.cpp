@@ -184,7 +184,6 @@ void HWVideoEncoder::recvFrame(MP4Muxer *mMuxer) {
             uint8_t *encodeData = AMediaCodec_getOutputBuffer(media_codec_, status,
                                                               NULL/* out_size */);
             int type = encodeData[4] & 0x1f;
-
             if ((info.flags & AMEDIACODEC_BUFFER_FLAG_CODEC_CONFIG) != 0) {
                 LOGCATE("ignoring AMEDIACODEC_BUFFER_FLAG_CODEC_CONFIG");
                 info.size = 0;

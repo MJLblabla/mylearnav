@@ -1,4 +1,0 @@
-com/libyuv/util/BuildConfig.java
- com.libyuv.util.BuildConfig
-com/libyuv/util/YuvUtil.java
- com.libyuv.util.YuvUtil

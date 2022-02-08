@@ -1,22 +1,22 @@
 package com.cxp.myffmpeglearn
 
-import androidx.appcompat.app.AppCompatActivity
-import android.os.Bundle
 import android.Manifest
-import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.BitmapFactory
 import android.net.Uri
+import android.os.Build
+import android.os.Bundle
+import android.os.Environment
 import android.util.Log
 import android.util.Size
 import android.widget.Toast
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
-import java.util.concurrent.Executors
+import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import com.cxp.myffmpeglearn.AudioRecorder.DEFAULT_SAMPLE_RATE
+import com.cxp.myffmpeglearn.CameraUtil.*
 import com.cxp.nativelibffmpeg.MediaRecorderContext
-import com.cxp.nativelibffmpeg.MediaRecorderContext.Companion.IMAGE_FORMAT_I420
 import com.cxp.nativelibffmpeg.MediaRecorderContext.Companion.RECORDER_TYPE_AV
 import kotlinx.android.synthetic.main.activity_main.*
 import java.io.File
@@ -24,14 +24,7 @@ import java.nio.ByteBuffer
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.ExecutorService
-import android.os.Build
-import android.os.Environment
-import android.view.Surface.ROTATION_0
-import android.view.Surface.ROTATION_90
-import com.cxp.myffmpeglearn.AudioRecorder.DEFAULT_SAMPLE_RATE
-import com.cxp.myffmpeglearn.CameraUtil.*
-import com.cxp.nativelibffmpeg.MediaRecorderContext.Companion.IMAGE_FORMAT_NV12
-import com.cxp.nativelibffmpeg.MediaRecorderContext.Companion.IMAGE_FORMAT_NV21
+import java.util.concurrent.Executors
 
 
 class MainActivity : AppCompatActivity() {
@@ -249,6 +242,7 @@ class MainActivity : AppCompatActivity() {
         mediaRecorderContext.native_StopRecord()
         mediaRecorderContext.native_DestroyContext()
         System.gc()
+        MediaStoreUtils.insertVideoToMediaStore(this, url)
         super.onBackPressed()
 
     }

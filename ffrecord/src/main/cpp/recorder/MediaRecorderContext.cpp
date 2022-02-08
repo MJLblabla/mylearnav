@@ -16,9 +16,9 @@ extern "C" {
 jfieldID MediaRecorderContext::s_ContextHandle = 0L;
 
 MediaRecorderContext::MediaRecorderContext() {
-   // mEnMuxer = new NativeMediaMuxer();
+  //  mEnMuxer = new NativeMediaMuxer();
      mEnMuxer = new EnMuxer();
-    mEnMuxer->init();
+     mEnMuxer->init();
 }
 
 MediaRecorderContext::~MediaRecorderContext() {
@@ -162,7 +162,6 @@ MediaRecorderContext::OnVideoFrame(int format, uint8_t *pBuffer, int widthsrc,
                                widthsrc, heightsrc);
             break;
         case IMAGE_FORMAT_NV21:
-
             libyuv::NV21ToI420(pBuffer, widthsrc,
                                pBuffer + src_y_size, widthsrc,
                                src_yuv, widthsrc,

@@ -9,7 +9,7 @@
 #include <cstdint>
 #include <jni.h>
 
-#include "../softencoder/EnMuxer.h"
+#include "../ffmuxer/EnMuxer.h"
 #include "../hwcodec/NativeMediaMuxer.h"
 
 #define RECORDER_TYPE_SINGLE_VIDEO  0 //仅录制视频
@@ -50,8 +50,6 @@ private:
     mutex m_mutex;
     RecorderParam mParam = {0};
     uint8_t *src_yuv = nullptr;
-
-
 };
 
 

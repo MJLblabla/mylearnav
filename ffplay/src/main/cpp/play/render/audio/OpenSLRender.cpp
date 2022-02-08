@@ -114,7 +114,7 @@ void OpenSLRender::UnInit() {
         m_thread = nullptr;
     }
 
-    AudioGLRender::ReleaseInstance();
+  //  AudioGLRender::ReleaseInstance();
 
 }
 
@@ -268,7 +268,7 @@ void OpenSLRender::HandleAudioFrameQueue() {
     if (nullptr != audioFrame && m_AudioPlayerPlay) {
         SLresult result = (*m_BufferQueue)->Enqueue(m_BufferQueue, audioFrame->data, (SLuint32) audioFrame->dataSize);
         if (result == SL_RESULT_SUCCESS) {
-            AudioGLRender::GetInstance()->UpdateAudioFrame(audioFrame);
+        //    AudioGLRender::GetInstance()->UpdateAudioFrame(audioFrame);
             m_AudioFrameQueue.pop();
             delete audioFrame;
         }
