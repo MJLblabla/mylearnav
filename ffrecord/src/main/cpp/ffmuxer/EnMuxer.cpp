@@ -4,11 +4,8 @@
 #include "EnMuxer.h"
 
 void EnMuxer::init() {
-    if(encoderType==1){
-        mVideoEncoder = new HWFFVideoEncoder();
-    } else{
-        mVideoEncoder = new SoftVideoEncoder();
-    }
+    //  mVideoEncoder = new HWVideoEncoder();
+    mVideoEncoder = new SoftVideoEncoder();
     mAudioEncoder = new SoftAudioEncoder();
 }
 
@@ -66,9 +63,7 @@ int EnMuxer::start(const char *url, RecorderParam *param) {
     }
 
     /* Write the stream header, if any. */
-    if(encoderType!=1){
-        result = avformat_write_header(m_AVFormatContext, nullptr);
-    }
+    result = avformat_write_header(m_AVFormatContext, nullptr);
     if (result < 0) {
         LOGCATE("MediaRecorder::StartRecord Error occurred when opening output file: %s",
                 av_err2str(result));
@@ -77,19 +72,23 @@ int EnMuxer::start(const char *url, RecorderParam *param) {
     }
     m_EncoderState = STATE_DECODING;
 
-    if (encoderThread == nullptr)
-        encoderThread = new thread(startMediaEncodeThread, this);
+    if (videoEncoderThread == nullptr)
+        videoEncoderThread = new thread(startVideoMediaEncodeThread, this);
+    if (audioEncoderThread == nullptr)
+        audioEncoderThread = new thread(startAudioMediaEncodeThread, this);
 
     return result;
 }
 
-void EnMuxer::startMediaEncodeThread(EnMuxer *recorder) {
-    recorder->loopEncoder();
+void EnMuxer::startVideoMediaEncodeThread(EnMuxer *recorder) {
+    recorder->loopVideoEncoder();
 }
 
-void EnMuxer::loopEncoder() {
+void EnMuxer::startAudioMediaEncodeThread(EnMuxer *recorder) {
+    recorder->loopAudioEncoder();
+}
 
-    mVideoEncoder->dealOneFrame();
+void EnMuxer::loopAudioEncoder() {
     while (!m_Exit) {
         while (m_EncoderState == STATE_PAUSE) {
             std::unique_lock<std::mutex> lock(m_Mutex);
@@ -101,18 +100,23 @@ void EnMuxer::loopEncoder() {
             LOGCATE("DeMuxer::DecodingLoop  stop break thread");
             break;
         }
-        LOGCATE("MediaRecorder::loopEncoder start");
-        double videoTimestamp = mVideoEncoder->getTimestamp();
-        double audioTimestamp = mAudioEncoder->getTimestamp();
+        mAudioEncoder->dealOneFrame();
+    }
+}
 
-        LOGCATE("MediaRecorder::loopEncoder [videoTimestamp, audioTimestamp]=[%lf, %lf]",
-                videoTimestamp, audioTimestamp);
+void EnMuxer::loopVideoEncoder() {
 
-        if (audioTimestamp >= videoTimestamp) {
-            mVideoEncoder->dealOneFrame();
-        } else {
-          //  mAudioEncoder->dealOneFrame();
+    while (!m_Exit) {
+        while (m_EncoderState == STATE_PAUSE) {
+            std::unique_lock<std::mutex> lock(m_Mutex);
+            LOGCATE("DeMuxer::DecodingLoop waiting, m_MediaType");
+            m_Cond.wait_for(lock, std::chrono::milliseconds(10));
         }
+        if (m_EncoderState == STATE_STOP) {
+            LOGCATE("DeMuxer::DecodingLoop  stop break thread");
+            break;
+        }
+        mVideoEncoder->dealOneFrame();
     }
 }
 
@@ -128,10 +132,15 @@ void EnMuxer::stop() {
     LOGCATE("MediaRecorder::StopRecord   mAudioEncoder->stop() f");
 
     LOGCATE("MediaRecorder::StopRecord  encoderThread->join() b");
-    if (encoderThread != nullptr) {
-        encoderThread->join();
-        delete encoderThread;
-        encoderThread = nullptr;
+    if (videoEncoderThread != nullptr) {
+        videoEncoderThread->join();
+        delete videoEncoderThread;
+        videoEncoderThread = nullptr;
+    }
+    if (audioEncoderThread != nullptr) {
+        audioEncoderThread->join();
+        delete audioEncoderThread;
+        audioEncoderThread = nullptr;
     }
     LOGCATE("MediaRecorder::StopRecord  encoderThread->join() f");
 

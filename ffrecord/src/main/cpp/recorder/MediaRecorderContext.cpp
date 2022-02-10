@@ -16,9 +16,9 @@ extern "C" {
 jfieldID MediaRecorderContext::s_ContextHandle = 0L;
 
 MediaRecorderContext::MediaRecorderContext() {
-  //  mEnMuxer = new NativeMediaMuxer();
-     mEnMuxer = new EnMuxer();
-     mEnMuxer->init();
+    //  mEnMuxer = new NativeMediaMuxer();
+    mEnMuxer = new EnMuxer();
+    mEnMuxer->init();
 }
 
 MediaRecorderContext::~MediaRecorderContext() {
@@ -100,11 +100,10 @@ MediaRecorderContext::StartRecord(int recorderType, const char *outUrl, int fram
     mParam.sampleDeep = audioSampleFormat;
 
     if (audioChannelCount == 1) {
-        mParam.audioChannelLayout = AV_CH_LAYOUT_MONO;
+        mParam.audioChannelLayout =  av_get_default_channel_layout(audioChannelCount);
     } else {
         mParam.audioChannelLayout = AV_CH_LAYOUT_STEREO;
     }
-
     if (mParam.sampleDeep == 16) {
         mParam.audioSampleFormat = AV_SAMPLE_FMT_S16;
     } else {

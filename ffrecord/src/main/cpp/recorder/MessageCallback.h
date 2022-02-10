@@ -52,7 +52,7 @@ struct RecorderParam {
 
     int channelCount ;
     int sampleDeep ;
-    int audioChannelLayout;
+    int64_t audioChannelLayout;
     AVSampleFormat audioSampleFormat;
 
 };

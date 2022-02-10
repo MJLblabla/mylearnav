@@ -14,8 +14,8 @@ import java.util.concurrent.Executors;
 public class AudioRecorder {
     private static final String TAG = "AudioRecorder";
     private AudioRecord mAudioRecord = null;
-    public static final int DEFAULT_SAMPLE_RATE = 44100;
-    private static final int DEFAULT_CHANNEL_LAYOUT = AudioFormat.CHANNEL_IN_STEREO;
+    public static final int DEFAULT_SAMPLE_RATE = 16000;
+    private static final int DEFAULT_CHANNEL_LAYOUT = AudioFormat.CHANNEL_IN_MONO;
     private static final int DEFAULT_SAMPLE_FORMAT = AudioFormat.ENCODING_PCM_16BIT;
 
     private final AudioRecorderCallback mRecorderCallback;

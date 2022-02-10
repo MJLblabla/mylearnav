@@ -219,7 +219,7 @@ class MainActivity : AppCompatActivity() {
             bitRate,
             fps,
             DEFAULT_SAMPLE_RATE,
-            2,
+            1,
             16
         )
     }

@@ -4,7 +4,7 @@
 extern "C" {
 #include <libavcodec/avcodec.h>
 }
-
+#define is_start_code(code)    (((code) & 0x0ffffff) == 0x01)
 #define H264_NALU_TYPE_NON_IDR_PICTURE                                  1
 #define H264_NALU_TYPE_IDR_PICTURE                                      5
 #define H264_NALU_TYPE_SEQUENCE_PARAMETER_SET                           7
@@ -86,7 +86,7 @@ int HWFFVideoEncoder::start(AVFormatContext *formatCtx, RecorderParam *param) {
     AVRational video_time_base = {1, 10000};
     mCodecCtx->time_base = AVRational{1, param->fps};
 //    mAvStream->avg_frame_rate = video_time_base;
-    mAvStream->time_base = AVRational{1, 10000};;
+    mAvStream->time_base = AVRational{1, 90000};
     mCodecCtx->gop_size = static_cast<int>(m_RecorderParam.fps);
     mCodecCtx->qmin = 10;
     mCodecCtx->qmax = 30;
@@ -169,63 +169,7 @@ int HWFFVideoEncoder::dealOneFrame() {
             // not expected for an encoder
             continue;
         } else if (status == AMEDIACODEC_INFO_OUTPUT_FORMAT_CHANGED) {
-
-            AMediaFormat *format = AMediaCodec_getOutputFormat(media_codec_);
-            if (format) {
-                uint8_t *sps = nullptr;
-                size_t sps_len = 0;
-                uint8_t *pps = nullptr;
-                size_t pps_len = 0;
-                bool sps_ok = AMediaFormat_getBuffer(format, "csd-0", (void **) &sps, &sps_len);
-                bool pps_ok = AMediaFormat_getBuffer(format, "csd-1", (void **) &pps, &pps_len);
-                if (sps_ok && pps_ok) {
-                    int sps_type = sps[4] & 0x1f;
-                    int pps_type = pps[4] & 0x1f;
-                    LOGCATE("%s %d AMediaCodec_dequeueOutputBuffer AMEDIACODEC_INFO_OUTPUT_FORMAT_CHANGED sps_type: %d sps_len: %u pps_type: %d pps_len: %u",
-                            __FUNCTION__, __LINE__, sps_type, sps_len, pps_type, pps_len);
-
-                    LOGCATE("pps_okpps_okpps_ok  \"%\" PRIu8 \"n\"   sps %p", pps, sps);
-                }
-
-                int extradata_len = 8 + sps_len - 4 + 1 + 2 + pps_len - 4;
-
-                mCodecCtx->extradata = reinterpret_cast<uint8_t *>(av_mallocz(
-                        static_cast<size_t>(extradata_len)));
-                mCodecCtx->extradata_size = extradata_len;
-                mCodecCtx->extradata[0] = 0x01;
-
-                mCodecCtx->extradata[0] = 0x01;
-                mCodecCtx->extradata[1] = sps[4 + 1];
-                mCodecCtx->extradata[2] = sps[4 + 2];
-                mCodecCtx->extradata[3] = sps[4 + 3];
-                mCodecCtx->extradata[4] = 0xFC | 3;
-                mCodecCtx->extradata[5] = 0xE0 | 1;
-                int tmp = sps_len - 4;
-                mCodecCtx->extradata[6] = static_cast<uint8_t>((tmp >> 8) & 0x00ff);
-                mCodecCtx->extradata[7] = static_cast<uint8_t>(tmp & 0x00ff);
-
-                int i = 0;
-                for (i = 0; i < tmp; i++) {
-                    mCodecCtx->extradata[8 + i] = sps[4 + i];
-                }
-                mCodecCtx->extradata[8 + tmp] = 0x01;
-                int tmp2 = pps_len - 4;
-                mCodecCtx->extradata[8 + tmp + 1] = static_cast<uint8_t>((tmp2 >> 8) & 0x00ff);
-                mCodecCtx->extradata[8 + tmp + 2] = static_cast<uint8_t>(tmp2 & 0x00ff);
-                for (i = 0; i < tmp2; i++) {
-                    mCodecCtx->extradata[8 + tmp + 3 + i] = pps[4 + i];
-                }
-
-                result= avformat_write_header(m_AVFormatContext, nullptr);
-                if (result < 0) {
-                    LOGCATE("Error occurred when opening output file: %s\n", av_err2str(result));
-                } else {
-                    LOGCATE("avformat_write_header success %d", result);
-                }
-                AMediaFormat_delete(format);
-            }
             continue;
-
         } else {
             if (status < 0) {
                 result = -1;
@@ -238,42 +182,105 @@ int HWFFVideoEncoder::dealOneFrame() {
             int nalu_type = (outputData[4] & 0x1F);
 
             int bufferSize = info.size;
-            if (nalu_type == H264_NALU_TYPE_IDR_PICTURE || nalu_type == H264_NALU_TYPE_SEI) {
 
-                m_Packet->size = info.size;
-                m_Packet->data = outputData;
+            if (nalu_type == H264_NALU_TYPE_SEQUENCE_PARAMETER_SET) {
+                // 我们这里要求sps和pps一块拼接起来构造成AVPacket传过来
+                int header_size_ = bufferSize;
+                uint8_t *header_data_ = new uint8_t[header_size_];
 
-                if (m_Packet->data[0] == 0x00 && m_Packet->data[1] == 0x00 &&
-                    m_Packet->data[2] == 0x00 && m_Packet->data[3] == 0x01) {
-                    bufferSize -= 4;
-                    m_Packet->data[0] = static_cast<uint8_t>(((bufferSize) >> 24) & 0x00ff);
-                    m_Packet->data[1] = static_cast<uint8_t>(((bufferSize) >> 16) & 0x00ff);
-                    m_Packet->data[2] = static_cast<uint8_t>(((bufferSize) >> 8) & 0x00ff);
-                    m_Packet->data[3] = static_cast<uint8_t>(((bufferSize)) & 0x00ff);
+                memcpy(header_data_, outputData, static_cast<size_t>(bufferSize));
+
+                uint8_t *spsFrame = 0;
+                uint8_t *ppsFrame = 0;
+
+                int spsFrameLen = 0;
+                int ppsFrameLen = 0;
+
+                ParseH264SequenceHeader(header_data_, static_cast<uint32_t>(header_size_),
+                                        &spsFrame, spsFrameLen,
+                                        &ppsFrame, ppsFrameLen);
+
+                // Extradata contains PPS & SPS for AVCC format
+                int extradata_len = 8 + spsFrameLen - 4 + 1 + 2 + ppsFrameLen - 4;
+
+
+                mAvStream->codecpar->extradata = reinterpret_cast<uint8_t *>(av_mallocz(
+                        static_cast<size_t>(extradata_len)));
+                mAvStream->codecpar->extradata_size = extradata_len;
+                mAvStream->codecpar->extradata[0] = 0x01;
+                mAvStream->codecpar->extradata[1] = spsFrame[4 + 1];
+                mAvStream->codecpar->extradata[2] = spsFrame[4 + 2];
+                mAvStream->codecpar->extradata[3] = spsFrame[4 + 3];
+                mAvStream->codecpar->extradata[4] = 0xFC | 3;
+                mAvStream->codecpar->extradata[5] = 0xE0 | 1;
+                int tmp = spsFrameLen - 4;
+                mAvStream->codecpar->extradata[6] = static_cast<uint8_t>((tmp >> 8) & 0x00ff);
+                mAvStream->codecpar->extradata[7] = static_cast<uint8_t>(tmp & 0x00ff);
+                int i = 0;
+                for (i = 0; i < tmp; i++) {
+                    mAvStream->codecpar->extradata[8 + i] = spsFrame[4 + i];
+                }
+                mAvStream->codecpar->extradata[8 + tmp] = 0x01;
+                int tmp2 = ppsFrameLen - 4;
+                mAvStream->codecpar->extradata[8 + tmp + 1] = static_cast<uint8_t>((tmp2 >> 8) &
+                                                                                   0x00ff);
+                mAvStream->codecpar->extradata[8 + tmp + 2] = static_cast<uint8_t>(tmp2 & 0x00ff);
+                for (i = 0; i < tmp2; i++) {
+                    mAvStream->codecpar->extradata[8 + tmp + 3 + i] = ppsFrame[4 + i];
                 }
 
-                m_Packet->pts = presentationTimeUs;
-                //  m_Packet->dts = pts;
-                m_Packet->flags = AV_PKT_FLAG_KEY;
+                result = avformat_write_header(m_AVFormatContext, nullptr);
 
+                delete[] header_data_;
+                if (result < 0) {
+                    LOGCATE("Error occurred when opening output file: %s\n", av_err2str(result));
+                } else {
+                    //   write_header_success_ = true;
+                    LOGCATE("avformat_write_header success %d", result);
+                }
             } else {
-                m_Packet->size = bufferSize;
-                m_Packet->data = outputData;
 
-                if (m_Packet->data[0] == 0x00 && m_Packet->data[1] == 0x00 &&
-                    m_Packet->data[2] == 0x00 && m_Packet->data[3] == 0x01) {
-                    bufferSize -= 4;
-                    m_Packet->data[0] = static_cast<uint8_t>(((bufferSize) >> 24) & 0x00ff);
-                    m_Packet->data[1] = static_cast<uint8_t>(((bufferSize) >> 16) & 0x00ff);
-                    m_Packet->data[2] = static_cast<uint8_t>(((bufferSize) >> 8) & 0x00ff);
-                    m_Packet->data[3] = static_cast<uint8_t>(((bufferSize)) & 0x00ff);
+                int64_t pts = av_rescale_q(info.presentationTimeUs, AV_TIME_BASE_Q,
+                                           mCodecCtx->time_base);
+                if (nalu_type == H264_NALU_TYPE_IDR_PICTURE || nalu_type == H264_NALU_TYPE_SEI) {
+
+                    m_Packet->size = info.size;
+                    m_Packet->data = outputData;
+
+                    if (m_Packet->data[0] == 0x00 && m_Packet->data[1] == 0x00 &&
+                        m_Packet->data[2] == 0x00 && m_Packet->data[3] == 0x01) {
+                        bufferSize -= 4;
+                        m_Packet->data[0] = static_cast<uint8_t>(((bufferSize) >> 24) & 0x00ff);
+                        m_Packet->data[1] = static_cast<uint8_t>(((bufferSize) >> 16) & 0x00ff);
+                        m_Packet->data[2] = static_cast<uint8_t>(((bufferSize) >> 8) & 0x00ff);
+                        m_Packet->data[3] = static_cast<uint8_t>(((bufferSize)) & 0x00ff);
+                    }
+
+                    m_Packet->pts = pts;
+                    m_Packet->dts = pts;
+                    m_Packet->flags = AV_PKT_FLAG_KEY;
+
+                } else {
+                    m_Packet->size = bufferSize;
+                    m_Packet->data = outputData;
+
+                    if (m_Packet->data[0] == 0x00 && m_Packet->data[1] == 0x00 &&
+                        m_Packet->data[2] == 0x00 && m_Packet->data[3] == 0x01) {
+                        bufferSize -= 4;
+                        m_Packet->data[0] = static_cast<uint8_t>(((bufferSize) >> 24) & 0x00ff);
+                        m_Packet->data[1] = static_cast<uint8_t>(((bufferSize) >> 16) & 0x00ff);
+                        m_Packet->data[2] = static_cast<uint8_t>(((bufferSize) >> 8) & 0x00ff);
+                        m_Packet->data[3] = static_cast<uint8_t>(((bufferSize)) & 0x00ff);
+                    }
+
+                    m_Packet->pts = pts;
+                    m_Packet->dts = pts;
+                    m_Packet->flags = 0;
                 }
-
-                m_Packet->pts = presentationTimeUs;
-                // m_Packet->dts = pts;
-                m_Packet->flags = 0;
+                m_Packet->stream_index = mAvStream->index;
+                result = WritePacket(m_AVFormatContext, &mCodecCtx->time_base, mAvStream, m_Packet);
             }
-            result = WritePacket(m_AVFormatContext, &mCodecCtx->time_base, mAvStream, m_Packet);
+
             AMediaCodec_releaseOutputBuffer(media_codec_, status, false);
             if (result < 0) {
                 LOGCATE("SoftVideoEncoder::EncodeVideoFrame video Error while writing audio frame: %s",
@@ -287,7 +294,6 @@ int HWFFVideoEncoder::dealOneFrame() {
         }
     }
 
-
     EXIT:
     av_packet_unref(m_Packet);
     NativeImageUtil::FreeNativeImage(videoFrame);
@@ -297,10 +303,68 @@ int HWFFVideoEncoder::dealOneFrame() {
 
 }
 
+
+uint32_t HWFFVideoEncoder::FindStartCode(uint8_t *in_buffer, uint32_t in_ui32_buffer_size,
+                                         uint32_t in_ui32_code,
+                                         uint32_t &out_ui32_processed_bytes) {
+    uint32_t ui32Code = in_ui32_code;
+    const uint8_t *ptr = in_buffer;
+    while (ptr < in_buffer + in_ui32_buffer_size) {
+        ui32Code = *ptr++ + (ui32Code << 8);
+        if (is_start_code(ui32Code)) {
+            break;
+        }
+    }
+    out_ui32_processed_bytes = (uint32_t) (ptr - in_buffer);
+    return ui32Code;
+}
+
+
+void HWFFVideoEncoder::ParseH264SequenceHeader(uint8_t *in_buffer, uint32_t in_ui32_size,
+                                               uint8_t **in_sps_buffer, int &in_sps_size,
+                                               uint8_t **in_pps_buffer, int &in_pps_size) {
+    uint32_t ui32StartCode = 0x0ff;
+    uint8_t *pBuffer = in_buffer;
+    uint32_t ui32BufferSize = in_ui32_size;
+    uint32_t sps = 0;
+    uint32_t pps = 0;
+    uint32_t idr = in_ui32_size;
+    do {
+        uint32_t ui32ProcessedBytes = 0;
+        ui32StartCode = FindStartCode(pBuffer, ui32BufferSize, ui32StartCode,
+                                      ui32ProcessedBytes);
+        pBuffer += ui32ProcessedBytes;
+        ui32BufferSize -= ui32ProcessedBytes;
+        if (ui32BufferSize < 1) {
+            break;
+        }
+
+        uint8_t val = static_cast<uint8_t>(*pBuffer & 0x1f);
+        // idr
+        if (val == 5) {
+            idr = pps + ui32ProcessedBytes - 4;
+        }
+        // sps
+        if (val == 7) {
+            sps = ui32ProcessedBytes;
+        }
+        // pps
+        if (val == 8) {
+            pps = sps + ui32ProcessedBytes;
+        }
+    } while (ui32BufferSize > 0);
+    *in_sps_buffer = in_buffer + sps - 4;
+    in_sps_size = pps - sps;
+    *in_pps_buffer = in_buffer + pps - 4;
+    in_pps_size = idr - pps + 4;
+}
+
+
 void HWFFVideoEncoder::write(VideoFrame *videoFrame) {
     uint8_t *data = videoFrame->ppPlane[0];
     mNextPts++;
-    int64_t pts = av_rescale_q(mNextPts, getTimeBase(), AV_TIME_BASE_Q);
+
+    int64_t pts = av_rescale_q(mNextPts, mCodecCtx->time_base, AV_TIME_BASE_Q);
 
     int size = videoFrame->width * videoFrame->height * 3 / 2;
 

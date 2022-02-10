@@ -190,7 +190,7 @@ void VideoDecoder::dealPackQueue() {
         }
         //一个 packet 包含多少 frame?
         int frameCount = 0;
-
+        LOGCATE("UpdateTimeStamp   VideoDecoder m_Packet %ld",m_Packet->pts);
         while (avcodec_receive_frame(m_AVCodecContext, m_Frame) >= 0) {
             //同步
             UpdateTimeStamp();
@@ -282,7 +282,7 @@ void VideoDecoder::dealPackQueue() {
 }
 
 void VideoDecoder::UpdateTimeStamp() {
-    LOGCATE("VideoDecoder::UpdateTimeStamp");
+
    // std::unique_lock <std::mutex> lock(m_Mutex);
     if (m_Frame->pkt_dts != AV_NOPTS_VALUE) {
         m_CurTimeStamp = m_Frame->pkt_dts;
@@ -291,8 +291,8 @@ void VideoDecoder::UpdateTimeStamp() {
     } else {
         m_CurTimeStamp = 0;
     }
-
     m_CurTimeStamp = (int64_t)(m_CurTimeStamp * timeBase * 1000);
+    LOGCATE("UpdateTimeStamp   VideoDecoder %ld %ld %ld",m_Frame->pts,m_Frame->pkt_dts,m_CurTimeStamp);
     // m_StartTimeStamp = GetSysCurrentTime() - m_CurTimeStamp;
 //    if(m_SeekPosition > 0 && m_SeekSuccess)
 //    {

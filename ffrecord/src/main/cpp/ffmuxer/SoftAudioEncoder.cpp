@@ -32,10 +32,10 @@ int SoftAudioEncoder::start(AVFormatContext *formatCtx, RecorderParam *param) {
     }
 
     mCodecCtx->sample_fmt = AV_SAMPLE_FMT_FLTP;//float, planar, 4 字节
-    mCodecCtx->sample_rate = DEFAULT_SAMPLE_RATE;
-    mCodecCtx->channel_layout = AV_CH_LAYOUT_STEREO;
+    mCodecCtx->sample_rate = param->audioSampleRate;
+    mCodecCtx->channel_layout = param->audioChannelLayout;
     mCodecCtx->channels = av_get_channel_layout_nb_channels(mCodecCtx->channel_layout);
-    mCodecCtx->bit_rate = 96000;
+    mCodecCtx->bit_rate = 22050;
 
     /* Some formats want stream headers to be separate. */
 //    if (formatCtx->oformat->flags & AVFMT_GLOBALHEADER)
@@ -87,14 +87,20 @@ int SoftAudioEncoder::start(AVFormatContext *formatCtx, RecorderParam *param) {
     }
 
     /* set options */
-    av_opt_set_channel_layout(m_pSwrCtx, "in_channel_layout", m_RecorderParam.audioChannelLayout,
-                              0);
-    av_opt_set_channel_layout(m_pSwrCtx, "out_channel_layout", mCodecCtx->channel_layout, 0);
-    av_opt_set_int(m_pSwrCtx, "in_sample_rate", m_RecorderParam.audioSampleRate, 0);
-    av_opt_set_int(m_pSwrCtx, "out_sample_rate", mCodecCtx->sample_rate, 0);
-    av_opt_set_sample_fmt(m_pSwrCtx, "in_sample_fmt",
-                          AVSampleFormat(m_RecorderParam.audioSampleFormat), 0);
-    av_opt_set_sample_fmt(m_pSwrCtx, "out_sample_fmt", AV_SAMPLE_FMT_FLTP, 0);
+//    av_opt_set_channel_layout(m_pSwrCtx, "in_channel_layout", m_RecorderParam.audioChannelLayout,
+//                              0);
+//    av_opt_set_channel_layout(m_pSwrCtx, "out_channel_layout", mCodecCtx->channel_layout, 0);
+//    av_opt_set_int(m_pSwrCtx, "in_sample_rate", m_RecorderParam.audioSampleRate, 0);
+//    av_opt_set_int(m_pSwrCtx, "out_sample_rate", mCodecCtx->sample_rate, 0);
+//    av_opt_set_sample_fmt(m_pSwrCtx, "in_sample_fmt",
+//                          AVSampleFormat(m_RecorderParam.audioSampleFormat), 0);
+//    av_opt_set_sample_fmt(m_pSwrCtx, "out_sample_fmt", AV_SAMPLE_FMT_FLTP, 0);
+
+    m_pSwrCtx = swr_alloc_set_opts(m_pSwrCtx,
+                                   m_RecorderParam.audioChannelLayout, AV_SAMPLE_FMT_FLTP,
+                                   m_RecorderParam.audioSampleRate,//输出格式
+                                   m_RecorderParam.audioChannelLayout, m_RecorderParam.audioSampleFormat,  m_RecorderParam.audioSampleRate, 0,
+                                   0);//输入格式
 
     if (m_pSwrCtx) {
         LOGCATE("SoftAudioEncoder::swr_init(m_pSwrCtx)");

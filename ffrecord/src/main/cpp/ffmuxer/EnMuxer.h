@@ -9,8 +9,7 @@
 #include "SoftVideoEncoder.h"
 #include "SoftAudioEncoder.h"
 #include "../recorder/IEnMuxer.h"
-#include "HWFFVideoEncoder.h"
-
+//#include "HWVideoEncoder.h"
 
 class EnMuxer : public IEnMuxer {
 
@@ -18,13 +17,17 @@ private:
     //封装格式上下文
     AVFormatContext *m_AVFormatContext = nullptr;
     //编码器线程
-    thread *encoderThread = nullptr;
     VideoEncoder *mVideoEncoder;
     AudioEncoder *mAudioEncoder;
-    int encoderType = 1;
-    static void startMediaEncodeThread(EnMuxer *recorder);
+    //编码器线程
+    thread *videoEncoderThread = nullptr;
+    //编码器线程
+    thread *audioEncoderThread = nullptr;
 
-    void loopEncoder();
+    static void startVideoMediaEncodeThread(EnMuxer *recorder);
+    static void startAudioMediaEncodeThread(EnMuxer *recorder);
+    void loopVideoEncoder();
+    void loopAudioEncoder();
 
 public:
 

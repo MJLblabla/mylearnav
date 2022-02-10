@@ -137,6 +137,7 @@ int SoftVideoEncoder::dealOneFrame() {
     LOGCATE("SoftVideoEncoder::EncodeVideoFrame %ld", mNextPts);
     int result = 0;
     int ret;
+    int m_PacketCount=0;
     AVCodecContext *c;
     AVFrame *frame;
     if (m_Packet == nullptr) {
@@ -186,6 +187,7 @@ int SoftVideoEncoder::dealOneFrame() {
         goto EXIT;
     }
 
+
     while (!ret && !m_Exit) {
         ret = avcodec_receive_packet(c, m_Packet);
         if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
@@ -207,9 +209,12 @@ int SoftVideoEncoder::dealOneFrame() {
             result = 0;
             goto EXIT;
         }
+        m_PacketCount++;
     }
 
     EXIT:
+    LOGCATE("SoftVideoEncoder::一freme 有多少pack ??? m_PacketCountm_PacketCountm_PacketCount =%d",
+            m_PacketCount);
     av_packet_unref(m_Packet);
     NativeImageUtil::FreeNativeImage(videoFrame);
     if (videoFrame) delete videoFrame;
