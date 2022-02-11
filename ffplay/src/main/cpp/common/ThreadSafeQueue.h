@@ -40,6 +40,7 @@ public:
         return m_dataQueue.empty();
     }
 
+
     int Size() {
         std::unique_lock<std::mutex> lk(m_mutex);
         return m_dataQueue.size();

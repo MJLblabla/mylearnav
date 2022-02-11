@@ -46,7 +46,7 @@ private:
 
     static void StoreContext(JNIEnv *env, jobject instance, MediaRecorderContext *pContext);
 
-    IEnMuxer *mEnMuxer = nullptr;
+    IPusher *mEnMuxer = nullptr;
     mutex m_mutex;
     RecorderParam mParam = {0};
     uint8_t *src_yuv = nullptr;

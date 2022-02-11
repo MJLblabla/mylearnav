@@ -15,5 +15,8 @@ class StartActivity : AppCompatActivity() {
         player.setOnClickListener {
             startActivity(Intent(this,playeractivity::class.java))
         }
+        pushrtmp.setOnClickListener {
+            startActivity(Intent(this,RTMPActivity::class.java))
+        }
     }
 }

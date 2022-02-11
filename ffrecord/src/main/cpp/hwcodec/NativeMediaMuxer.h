@@ -5,7 +5,7 @@
 #include "HWAudioEncoder.h"
 #include "MP4Muxer.h"
 
-class NativeMediaMuxer : public IEnMuxer {
+class NativePusher : public IPusher {
 
 protected:
 
@@ -17,8 +17,8 @@ protected:
     //编码器线程
     thread *audioEncoderThread = nullptr;
 
-    static void startVideoMediaEncodeThread(NativeMediaMuxer *recorder);
-    static void startAudioMediaEncodeThread(NativeMediaMuxer *recorder);
+    static void startVideoMediaEncodeThread(NativePusher *recorder);
+    static void startAudioMediaEncodeThread(NativePusher *recorder);
     void loopVideoEncoder();
     void loopAudioEncoder();
 

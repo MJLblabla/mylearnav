@@ -1,19 +1,19 @@
 
 #include "NativeMediaMuxer.h"
 
-void NativeMediaMuxer::init() {
+void NativePusher::init() {
     mVideoEncoder = new HWVideoEncoder();
     mAudioEncoder = new HWAudioEncoder();
 }
 
-void NativeMediaMuxer::unInit() {
+void NativePusher::unInit() {
     delete mVideoEncoder;
     delete mAudioEncoder;
     mVideoEncoder = nullptr;
     mAudioEncoder = nullptr;
 }
 
-int NativeMediaMuxer::start(const char *url, RecorderParam *param) {
+int NativePusher::start(const char *url, RecorderParam *param) {
     strcpy(m_OutUrl, url);
     mp4Muxer = new MP4Muxer(m_OutUrl);
 
@@ -34,14 +34,14 @@ int NativeMediaMuxer::start(const char *url, RecorderParam *param) {
     return result;
 }
 
-void NativeMediaMuxer::startVideoMediaEncodeThread(NativeMediaMuxer *recorder) {
+void NativePusher::startVideoMediaEncodeThread(NativePusher *recorder) {
     recorder->loopVideoEncoder();
 }
-void NativeMediaMuxer::startAudioMediaEncodeThread(NativeMediaMuxer *recorder) {
+void NativePusher::startAudioMediaEncodeThread(NativePusher *recorder) {
     recorder->loopAudioEncoder();
 }
 
-void NativeMediaMuxer::loopVideoEncoder() {
+void NativePusher::loopVideoEncoder() {
     while (!m_Exit) {
         while (m_EncoderState == STATE_PAUSE) {
             std::unique_lock<std::mutex> lock(m_Mutex);
@@ -56,7 +56,7 @@ void NativeMediaMuxer::loopVideoEncoder() {
         mVideoEncoder->dealOneFrame(mp4Muxer);
     }
 }
-void NativeMediaMuxer::loopAudioEncoder() {
+void NativePusher::loopAudioEncoder() {
     while (!m_Exit) {
         while (m_EncoderState == STATE_PAUSE) {
             std::unique_lock<std::mutex> lock(m_Mutex);
@@ -72,18 +72,18 @@ void NativeMediaMuxer::loopAudioEncoder() {
     }
 }
 
-void NativeMediaMuxer::pause() {
+void NativePusher::pause() {
     std::unique_lock<std::mutex> lock(m_Mutex);
     m_EncoderState = STATE_PAUSE;
 }
 
-void NativeMediaMuxer::resume() {
+void NativePusher::resume() {
     std::unique_lock<std::mutex> lock(m_Mutex);
     m_EncoderState = STATE_DECODING;
     m_Cond.notify_all();
 }
 
-void NativeMediaMuxer::stop() {
+void NativePusher::stop() {
     m_Exit = true;
     m_EncoderState = STATE_STOP;
 
@@ -109,7 +109,7 @@ void NativeMediaMuxer::stop() {
     delete mp4Muxer;
 }
 
-int NativeMediaMuxer::onFrame2Encode(AudioFrame *inputFrame) {
+int NativePusher::onFrame2Encode(AudioFrame *inputFrame) {
     if (m_EncoderState != STATE_DECODING || mAudioEncoder->getQueueSize() > 5) {
         delete inputFrame;
         inputFrame = nullptr;
@@ -119,7 +119,7 @@ int NativeMediaMuxer::onFrame2Encode(AudioFrame *inputFrame) {
     return 1;
 }
 
-int NativeMediaMuxer::onFrame2Encode(VideoFrame *inputFrame) {
+int NativePusher::onFrame2Encode(VideoFrame *inputFrame) {
     if (m_EncoderState != STATE_DECODING || mVideoEncoder->getQueueSize() > 5) {
         NativeImageUtil::FreeNativeImage(inputFrame);
         delete inputFrame;

@@ -164,11 +164,11 @@ void HWVideoEncoder::recvFrame(MP4Muxer *mMuxer) {
                 if (sps_ok && pps_ok) {
                     int sps_type = sps[4] & 0x1f;
                     int pps_type = pps[4] & 0x1f;
-                    LOGCATE("%s %d AMediaCodec_dequeueOutputBuffer AMEDIACODEC_INFO_OUTPUT_FORMAT_CHANGED sps_type: %d sps_len: %u pps_type: %d pps_len: %u",
-                            __FUNCTION__, __LINE__, sps_type, sps_len, pps_type, pps_len);
 
-
-                    LOGCATE("pps_okpps_okpps_ok  \"%\" PRIu8 \"n\"   sps %p", pps, sps);
+//                    LOGCATE("pps_okpps_okpps_ok   sps[4] %d  sps_type %d ",  sps[4],sps_type);
+//                    for (size_t cnt = 0; cnt < sps_len; cnt++) {
+//                        LOGCATE("pps_okpps_okpps_ok  %d index %zu", sps[cnt],cnt);
+//                    }
                 }
                 LOGCATE("%s %d AMediaCodec_dequeueOutputBuffer AMEDIACODEC_INFO_OUTPUT_FORMAT_CHANGED %s",
                         __FUNCTION__, __LINE__, AMediaFormat_toString(format));
