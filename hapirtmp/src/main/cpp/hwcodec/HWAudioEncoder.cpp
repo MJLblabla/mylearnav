@@ -62,6 +62,13 @@ void HWAudioEncoder::clear() {
         AMediaCodec_delete(media_codec_);
         media_codec_ = nullptr;
     }
+    while (!m_AudioFrameQueue.Empty()) {
+        AudioFrame *frame = m_AudioFrameQueue.Pop();
+        if (frame != nullptr) {
+            delete frame;
+            frame = nullptr;
+        }
+    }
 }
 
 long HWAudioEncoder::getTimestamp() {
@@ -82,12 +89,13 @@ int HWAudioEncoder::dealOneFrame(RTMPPush *mRTMPPush) {
         return -1;
     }
 
-
     encodeFrame(frame->data, frame->dataSize, getTimestamp());
 
     recvFrame(mRTMPPush);
     EXIT:
     delete frame;
+    frame = nullptr;
+
     return result;
 }
 

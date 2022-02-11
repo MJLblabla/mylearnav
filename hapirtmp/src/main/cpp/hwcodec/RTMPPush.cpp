@@ -105,7 +105,14 @@ void RTMPPush::stop() {
         delete pushThread;
         pushThread = nullptr;
     }
-
+    while (!rtmpPackQueue.Empty()) {
+        RTMPPacket *packet = rtmpPackQueue.Pop();
+        if(packet!= nullptr){
+            RTMPPacket_Free(packet);
+            free(packet);
+            packet = NULL;
+        }
+    }
 }
 
 void RTMPPush::pushSpsPps(uint8_t *sps, int sps_len, uint8_t *pps, int pps_len) {
@@ -198,9 +205,7 @@ void RTMPPush::pushVideoData(uint8_t *video, int len, int type) {
     body[i++] = 0x00;
     body[i++] = 0x00;  //5
 
-
    // 长度
-
     body[i++] = (data_len >> 24) & 0xff;
     body[i++] = (data_len >> 16) & 0xff;
     body[i++] = (data_len >> 8) & 0xff;

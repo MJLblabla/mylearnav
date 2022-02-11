@@ -66,7 +66,14 @@ void HWVideoEncoder::clear() {
         AMediaCodec_delete(media_codec_);
         media_codec_ = nullptr;
     }
-
+    while (!mVideoFrameQueue.Empty()) {
+        VideoFrame *videoFrame = mVideoFrameQueue.Pop();
+        if (videoFrame != nullptr) {
+            NativeImageUtil::FreeNativeImage(videoFrame);
+            delete videoFrame;
+            videoFrame = nullptr;
+        }
+    }
 }
 
 long HWVideoEncoder::getTimestamp() {
@@ -97,6 +104,7 @@ int HWVideoEncoder::dealOneFrame(RTMPPush *mRTMPPush) {
     EXIT:
     NativeImageUtil::FreeNativeImage(videoFrame);
     delete videoFrame;
+    videoFrame = nullptr;
     return result;
 }
 
@@ -164,7 +172,7 @@ void HWVideoEncoder::recvFrame(RTMPPush *mRTMPPush) {
 
                 LOGCATE("%s %d AMediaCodec_dequeueOutputBuffer AMEDIACODEC_INFO_OUTPUT_FORMAT_CHANGED %s",
                         __FUNCTION__, __LINE__, AMediaFormat_toString(format));
-                mRTMPPush->pushSpsPps(sps+4,sps_len-4,pps+4,pps_len-4);
+                mRTMPPush->pushSpsPps(sps + 4, sps_len - 4, pps + 4, pps_len - 4);
                 AMediaFormat_delete(format);
             }
             continue;
@@ -186,7 +194,7 @@ void HWVideoEncoder::recvFrame(RTMPPush *mRTMPPush) {
             LOGCATE("nalu, AMediaCodec_dequeueOutputBuffer video type: %d size: %u flags: %u offset: %u pts: %ld",
                     type, info.size, info.flags, info.offset, info.presentationTimeUs);
 
-            mRTMPPush->pushVideoData(encodeData,info.size,type);
+            mRTMPPush->pushVideoData(encodeData, info.size, type);
             AMediaCodec_releaseOutputBuffer(media_codec_, status, false);
             if ((info.flags & AMEDIACODEC_BUFFER_FLAG_END_OF_STREAM) != 0) {
                 break;

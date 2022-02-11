@@ -67,6 +67,15 @@ void HWVideoEncoder::clear() {
         media_codec_ = nullptr;
     }
 
+    while (!mVideoFrameQueue.Empty()) {
+        VideoFrame *videoFrame = mVideoFrameQueue.Pop();
+        if (videoFrame != nullptr) {
+            NativeImageUtil::FreeNativeImage(videoFrame);
+            delete videoFrame;
+            videoFrame = nullptr;
+        }
+    }
+
 }
 
 long HWVideoEncoder::getTimestamp() {
@@ -97,6 +106,7 @@ int HWVideoEncoder::dealOneFrame(MP4Muxer *mMuxer) {
     EXIT:
     NativeImageUtil::FreeNativeImage(videoFrame);
     delete videoFrame;
+    videoFrame = nullptr;
     return result;
 }
 
