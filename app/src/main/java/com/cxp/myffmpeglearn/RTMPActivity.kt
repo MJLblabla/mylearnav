@@ -170,10 +170,10 @@ class RTMPActivity : AppCompatActivity() {
             val preview = Preview.Builder()
 
                 .build()
-                .also {
-                    it.setSurfaceProvider(viewFinder.surfaceProvider)
-                }
-
+//                .also {
+//                    it.setSurfaceProvider(viewFinder.surfaceProvider)
+//                }
+            preview.setSurfaceProvider(viewFinder.surfaceProvider)
 
             // Select back camera as a default
             val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA

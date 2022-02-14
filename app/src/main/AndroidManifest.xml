@@ -23,6 +23,9 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.MyFfmpegLearn">
         <activity
+            android:name=".TestAvtivity"
+            android:exported="false" />
+        <activity
             android:name=".RTMPActivity"
             android:exported="false" />
         <activity

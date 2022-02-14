@@ -2,6 +2,8 @@ package com.cxp.myffmpeglearn
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -14,6 +16,8 @@ import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.blabla.beauty.BeautyRender
+import com.blabla.beauty.BeautyRender.Companion.type_lut
 import com.cxp.myffmpeglearn.AudioRecorder.DEFAULT_SAMPLE_RATE
 import com.cxp.myffmpeglearn.CameraUtil.*
 import com.cxp.nativelibffmpeg.MediaRecorderContext
@@ -35,8 +39,13 @@ class MainActivity : AppCompatActivity() {
         context.native_CreateContext()
         context
     }
-    private var imageCapture: ImageCapture? = null
 
+    private val mBeautyRender by lazy {
+        BeautyRender().apply {
+            create(type_lut)
+        }
+    }
+    private var imageCapture: ImageCapture? = null
     val rgbaProducer = RGBAProducer()
     val consumerBuffer = RGBAConsumerBuffer()
     private val audioRecorder by lazy {
@@ -68,6 +77,13 @@ class MainActivity : AppCompatActivity() {
             // var byteArray = CameraUtil.getDataFromImage(image, CameraUtil.COLOR_FormatNV21)
 
             rgbaProducer.parseImg(image)
+
+            mBeautyRender.rendRGBAFrame(
+                rgbaProducer.rgbaByteArray!!,
+                w,
+                h
+            )
+
             // consumerBuffer.addRgbQueen(rgbaProducer.rgbaByteArray!!,rgbaProducer.mWidth,rgbaProducer.mHeight,rgbaProducer.pixelStride,rgbaProducer.rowPadding)
             mediaRecorderContext.native_OnVideoDataRgba(
                 rgbaProducer.rgbaByteArray!!,
@@ -77,7 +93,18 @@ class MainActivity : AppCompatActivity() {
                 rgbaProducer.rowPadding
             );
             Log.d("mjl", "onImageProxy finish ${w}  ${h} ${image.imageInfo.rotationDegrees}")
+            // image.image!!.proo
 
+            val bm = Bitmap.createBitmap(
+                rgbaProducer.mWidth + rgbaProducer.rowPadding / rgbaProducer.pixelStride,
+                rgbaProducer.mHeight,
+                Bitmap.Config.ARGB_8888
+            )
+
+            bm?.copyPixelsFromBuffer(ByteBuffer.wrap(   rgbaProducer.rgbaByteArray!!, 0,    rgbaProducer.rgbaByteArray!!.size))
+            ivImg.post {
+                ivImg.setImageBitmap(bm)
+            }
             image.close()
         }
     }
@@ -155,7 +182,7 @@ class MainActivity : AppCompatActivity() {
         val imageAnalyzer = ImageAnalysis.Builder()
 
             .setTargetResolution(Size(480, 640))
-            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+            .setBackpressureStrategy(ImageAnalysis.STRATEGY_BLOCK_PRODUCER)
             .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
             .build()
 
@@ -173,10 +200,8 @@ class MainActivity : AppCompatActivity() {
             val preview = Preview.Builder()
 
                 .build()
-                .also {
-                    it.setSurfaceProvider(viewFinder.surfaceProvider)
-                }
 
+            preview.setSurfaceProvider(viewFinder.surfaceProvider)
 
             // Select back camera as a default
             val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
@@ -233,7 +258,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-
+        mBeautyRender.release()
     }
 
     override fun onBackPressed() {
@@ -266,7 +291,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
-
 
     companion object {
         private const val TAG = "CameraXBasic"

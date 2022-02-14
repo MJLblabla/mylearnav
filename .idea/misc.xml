@@ -3,10 +3,12 @@
   <component name="DesignSurface">
     <option name="filePathToZoomLevelMap">
       <map>
+        <entry key="../../../../layout/custom_preview.xml" value="0.225" />
         <entry key="app/src/main/res/layout/activity_main.xml" value="0.1" />
         <entry key="app/src/main/res/layout/activity_playeractivity.xml" value="0.17527173913043478" />
         <entry key="app/src/main/res/layout/activity_rtc.xml" value="0.1852355072463768" />
         <entry key="app/src/main/res/layout/activity_start.xml" value="0.1802536231884058" />
+        <entry key="app/src/main/res/layout/activity_test_avtivity.xml" value="0.19791666666666666" />
         <entry key="app/src/main/res/layout/item_v.xml" value="0.1802536231884058" />
         <entry key="libopengles/src/main/res/layout/activity_egl.xml" value="0.1" />
         <entry key="libopengles/src/main/res/layout/activity_main.xml" value="0.1" />

@@ -17,3 +17,4 @@ include ':webrtc1v1'
 include ':ffplay'
 
 include ':hapirtmp'
+include ':openglbeauty'
