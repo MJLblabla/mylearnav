@@ -59,9 +59,7 @@ void BaseBeautyRender::rendRGBAFrame(uint8_t *rgbaBuffer, int widthsrc, int heig
         mEGLTools->CreateGlesEnv();
         m_ProgramObj = GLUtils::CreateProgram(vShaderStr, getFragShaderStr(), m_VertexShader,
                                               m_FragmentShader);
-        if (m_ProgramObj) {
-            m_SamplerLoc = glGetUniformLocation(m_ProgramObj, "s_TextureMap");
-        }
+        m_SamplerLoc = glGetUniformLocation(m_ProgramObj, "s_TextureMap");
 
         //create RGBA texture
         glGenTextures(1, &m_TextureId);

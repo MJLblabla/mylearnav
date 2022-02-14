@@ -17,9 +17,11 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.blabla.beauty.BeautyRender
+import com.blabla.beauty.BeautyRender.Companion.dynimic
 import com.blabla.beauty.BeautyRender.Companion.type_lut
 import com.cxp.myffmpeglearn.AudioRecorder.DEFAULT_SAMPLE_RATE
 import com.cxp.myffmpeglearn.CameraUtil.*
+import com.cxp.myffmpeglearn.gl.TextureUtils
 import com.cxp.nativelibffmpeg.MediaRecorderContext
 import com.cxp.nativelibffmpeg.MediaRecorderContext.Companion.RECORDER_TYPE_AV
 import kotlinx.android.synthetic.main.activity_main.*
@@ -43,7 +45,10 @@ class MainActivity : AppCompatActivity() {
     private val mBeautyRender by lazy {
         BeautyRender().apply {
             create(type_lut)
+            TextureUtils.init()
+            setLUTTexure(TextureUtils.loadTexture(BitmapFactory.decodeResource(resources,R.drawable.lut_b)))
         }
+
     }
     private var imageCapture: ImageCapture? = null
     val rgbaProducer = RGBAProducer()
