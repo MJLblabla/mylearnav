@@ -39,6 +39,7 @@ public:
     virtual char *getFragShaderStr() = 0;
 
     virtual void drawFragShader(int widthsrc, int heightsrc) = 0;
+
 };
 
 #endif

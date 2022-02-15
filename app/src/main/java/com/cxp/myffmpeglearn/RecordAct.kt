@@ -46,9 +46,8 @@ class MainActivity : AppCompatActivity() {
         BeautyRender().apply {
             create(type_lut)
             TextureUtils.init()
-            setLUTTexure(TextureUtils.loadTexture(BitmapFactory.decodeResource(resources,R.drawable.lut_b)))
+            setLUTTexure(TextureUtils.loadTexture(BitmapFactory.decodeResource(resources,R.drawable.lut_a)))
         }
-
     }
     private var imageCapture: ImageCapture? = null
     val rgbaProducer = RGBAProducer()

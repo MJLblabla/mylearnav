@@ -201,7 +201,7 @@ void HWVideoEncoder::recvFrame(MP4Muxer *mMuxer) {
             size_t dataSize = info.size;
             ++outFrame_idx_;
             LOGCATE("VideoFrame index  outFrame_idx_ (%ld)", outFrame_idx_);
-            LOGCATE("nalu, AMediaCodec_dequeueOutputBuffer video type: %d size: %u flags: %u offset: %u pts: %ld",
+            LOGCATE("nalu, AMediaCodec_dequeueOutputBuffer video ——type: %d size: %u ——flags: %u offset: %u pts: %ld",
                     type, info.size, info.flags, info.offset, info.presentationTimeUs);
 
 

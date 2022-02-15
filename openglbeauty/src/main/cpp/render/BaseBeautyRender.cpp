@@ -26,26 +26,35 @@ char fShaderStr[] =
         "}                                                   \n";
 
 static GLfloat verticesCoords[] = {
-        -1.0f, 1.0f, 0.0f,  // Position 0
-        -1.0f, -1.0f, 0.0f,  // Position 1
-        1.0f, -1.0f, 0.0f,  // Position 2
-        1.0f, 1.0f, 0.0f,  // Position 3
+        0.0f, 0.0f, 0.0f,     //顶点坐标V0
+        1.0f, 1.0f, 0.0f,     //顶点坐标V1
+        -1.0f, 1.0f, 0.0f,    //顶点坐标V2
+        -1.0f, -1.0f, 0.0f,   //顶点坐标V3
+        1.0f, -1.0f, 0.0f     //顶点坐标V4
 };
 
 
 static GLfloat textureCoords[] = {
-        0.0f, 0.0f,        // TexCoord 0
-        0.0f, 1.0f,        // TexCoord 1
-        1.0f, 1.0f,        // TexCoord 2
-        1.0f, 0.0f         // TexCoord 3
+        0.5f, 0.5f, //纹理坐标V0
+        1.0f, 0.0f,     //纹理坐标V1
+        0.0f, 0.0f,     //纹理坐标V2
+        0.0f, 1.0f,   //纹理坐标V3
+        1.0f, 1.0f    //纹理坐标V4
 };
 
-static GLushort indices[] = {0, 1, 2, 0, 2, 3};
+static GLushort indices[] = {
+        0, 1, 2,  //V0,V1,V2 三个顶点组成一个三角形
+        0, 2, 3,  //V0,V2,V3 三个顶点组成一个三角形
+        0, 3, 4,  //V0,V3,V4 三个顶点组成一个三角形
+        0, 4, 1   //V0,V4,V1 三个顶点组成一个三角形
+
+};
 
 
 BaseBeautyRender::BaseBeautyRender() {
     mEGLTools = new EGLTools();
     mFBOTools = new FBOTools();
+    mEGLTools->CreateGlesEnv();
 }
 
 BaseBeautyRender::~BaseBeautyRender() {
@@ -56,7 +65,7 @@ BaseBeautyRender::~BaseBeautyRender() {
 void BaseBeautyRender::rendRGBAFrame(uint8_t *rgbaBuffer, int widthsrc, int heightsrc) {
     if (!isCreate) {
         isCreate = true;
-        mEGLTools->CreateGlesEnv();
+
         m_ProgramObj = GLUtils::CreateProgram(vShaderStr, getFragShaderStr(), m_VertexShader,
                                               m_FragmentShader);
         m_SamplerLoc = glGetUniformLocation(m_ProgramObj, "s_TextureMap");
@@ -120,6 +129,7 @@ void BaseBeautyRender::rendRGBAFrame(uint8_t *rgbaBuffer, int widthsrc, int heig
                  rgbaBuffer);
     glBindTexture(GL_TEXTURE_2D, GL_NONE);
 
+
     mFBOTools->bindFBO();
     //开始绘制
     glUseProgram(m_ProgramObj);
@@ -129,8 +139,10 @@ void BaseBeautyRender::rendRGBAFrame(uint8_t *rgbaBuffer, int widthsrc, int heig
     glBindTexture(GL_TEXTURE_2D, m_TextureId);
     // Set the RGBA map sampler to texture unit to 0
     glUniform1i(m_SamplerLoc, 0);
+
     drawFragShader(widthsrc, heightsrc);
-    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, (const void *) 0);
+
+    glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_SHORT, (const void *) 0);
     // uint8_t *pBuffer = static_cast<uint8_t *>(malloc(widthsrc * heightsrc * 4));
       GetRenderFrameFromFBO(rgbaBuffer,widthsrc,heightsrc);
     //int resut =0;

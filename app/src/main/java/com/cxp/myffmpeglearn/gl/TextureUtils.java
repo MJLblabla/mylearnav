@@ -10,6 +10,8 @@ import android.opengl.GLES30;
 import android.opengl.GLUtils;
 import android.util.Log;
 
+import java.nio.ByteBuffer;
+
 import javax.microedition.khronos.opengles.GL10;
 
 /**
@@ -19,13 +21,13 @@ import javax.microedition.khronos.opengles.GL10;
 public class TextureUtils {
 
     private static final String TAG = "TextureUtils";
-    private static  int[] textureIds = new int[1];
+    private static int[] textureIds = new int[1];
 
-    public static void init(){
+    public static void init() {
         GLES30.glGenTextures(1, textureIds, 0);
         if (textureIds[0] == 0) {
             Log.e(TAG, "Could not generate a new OpenGL textureId object.");
-            return ;
+            return;
         }
     }
 
@@ -69,12 +71,24 @@ public class TextureUtils {
         // 绑定纹理到OpenGL
         GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, textureIds[0]);
 
-        GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MIN_FILTER, GLES30.GL_LINEAR_MIPMAP_LINEAR);
+        GLES30.glTexParameterf(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_WRAP_S, GLES30.GL_CLAMP_TO_EDGE);
+        GLES30.glTexParameterf(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_WRAP_T, GLES30.GL_CLAMP_TO_EDGE);
+        GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MIN_FILTER, GLES30.GL_LINEAR);
         GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MAG_FILTER, GLES30.GL_LINEAR);
-        // 加载bitmap到纹理中
-        GLUtils.texImage2D(GLES30.GL_TEXTURE_2D, 0, bitmap, 0);
+
+//        Bitmap b = bitmap;
+//        int bytes = b.getByteCount();
+//        ByteBuffer buffer = ByteBuffer.allocate(bytes);
+
+      //  byte[] data = buffer.array(); //Get the
+
+//        GLES30.glTexImage2D(GLES30.GL_TEXTURE_2D, 0, GLES30.GL_RGBA, bitmap.getWidth(), bitmap.getHeight(), 0,
+//                GLES30.GL_RGBA,
+//                GLES30.GL_UNSIGNED_BYTE, buffer);
+
+         GLUtils.texImage2D(GLES30.GL_TEXTURE_2D, 0, bitmap, 0);
         // 生成MIP贴图
-        GLES30.glGenerateMipmap(GLES30.GL_TEXTURE_2D);
+      //  GLES30.glGenerateMipmap(GLES30.GL_TEXTURE_2D);
         // 取消绑定纹理
         GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, 0);
 
